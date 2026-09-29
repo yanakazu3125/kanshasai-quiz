@@ -5,36 +5,66 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>クイズ全体表示 - 運用者</title>
 
+    <!-- 問題画面のテロップ風フォント -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="display.css" />
   </head>
   <body class="page-display">
-    <!-- クイズ開始前の待機画面（QRコードと動画） -->
+    <!-- クイズ開始前の待機画面（参加用QRコード） -->
     <div id="pre-quiz-screen" class="pre-quiz-screen">
       <div class="pre-quiz-content">
-        <div class="qr-section">
-          <h2>参加者はこちら</h2>
-          <div id="qr-code-container">
-            <img
-              id="qr-code-img"
-              src=""
-              alt="参加用QRコード"
-            />
-          </div>
-          <div id="join-url-display" class="join-url-display">
-            読み込み中...
-          </div>
+        <h2 class="pre-quiz-title">参加者はこちら</h2>
+        <div id="qr-code-container">
+          <img id="qr-code-img" src="" alt="参加用QRコード" />
         </div>
-        <div class="video-section">
-          <h2>動画を再生中...</h2>
-          <div id="youtube-player-container" style="width: 100%; max-width: 800px; margin: 0 auto;">
-            <div id="youtube-player"></div>
-          </div>
-          <div class="video-controls">
-            <button id="skip-video-btn">動画をスキップ</button>
-            <button id="replay-video-btn" style="display: none;">動画を再生し直す</button>
-          </div>
-        </div>
+        <p class="pre-quiz-note">スマホのカメラで読み取って参加してください</p>
+        <div id="join-url-display" class="join-url-display">読み込み中...</div>
       </div>
+      <button id="pre-quiz-start-btn" class="pre-quiz-start-btn">クイズを始める</button>
+    </div>
+
+    <!-- タイトル演出画面（動画スキップ後、クイズ本編前に挟む） -->
+    <div id="title-screen" class="title-screen hidden">
+      <video
+        id="title-bg-video"
+        class="title-bg-video"
+        src="/title/bg-blue.mp4"
+        autoplay
+        loop
+        muted
+        playsinline
+      ></video>
+      <audio id="title-bgm" src="/title/bgm.mp3" loop></audio>
+      <div class="title-stage">
+        <img id="title-logo" class="title-logo" src="/title/logo.png" alt="タイトルロゴ" />
+        <img id="title-super" class="title-super" src="/title/super.png" alt="" />
+        <!-- 左下の画像（管理画面で設定。未設定なら非表示） -->
+        <img id="title-custom-image" class="title-custom-image" alt="" hidden />
+      </div>
+      <button id="title-start-btn" class="title-start-btn">クイズを始める</button>
+    </div>
+
+    <!-- ルール説明動画（タイトルの次に再生） -->
+    <div id="rule-screen" class="rule-screen hidden">
+      <video
+        id="rule-video"
+        class="rule-video"
+        src="/title/rule.mp4"
+        playsinline
+      ></video>
+      <button id="rule-next-btn" class="rule-skip-btn">次へ</button>
+    </div>
+
+    <!-- 問題タイトル画面（03：画像＋ジングル） -->
+    <div id="qtitle-screen" class="qtitle-screen hidden">
+      <audio id="qtitle-jingle" src="/title/qtitle-jingle.mp3" loop></audio>
+      <img id="qtitle-image" class="qtitle-image" src="/title/qtitle-super.png" alt="第1問" />
+      <button id="qtitle-next-btn" class="qtitle-next-btn">次へ</button>
     </div>
 
     <!-- 既存のQRコードバッジ（クイズ中は非表示） -->
@@ -50,6 +80,14 @@
       </div>
     </div>
     <div class="container" id="quiz-container" style="display: none;">
+      <!-- 問題文と選択肢を表示する時の効果音（04） -->
+      <audio id="question-reveal-se" src="/title/question-syutudai.mp3" preload="auto"></audio>
+      <!-- カウントダウン中のBGM／時間切れのドラ／正解発表のピンポン -->
+      <audio id="question-bgm" src="/title/question-bgm.mp3" preload="auto" loop></audio>
+      <audio id="timeup-se" src="/title/timeup-gong.mp3" preload="auto"></audio>
+      <audio id="answer-se" src="/title/answer-pinpon.mp3" preload="auto"></audio>
+      <!-- 最終ランキングのBGM -->
+      <audio id="ranking-bgm" src="/title/ranking-bgm.m4a" preload="auto" loop></audio>
       <header id="topbar">
         <div id="countdown-container">
           <div id="countdown">--</div>
@@ -116,8 +154,6 @@
     </div>
     <!-- Socket.IO -->
     <script src="/socket.io/socket.io.js"></script>
-    <!-- YouTube IFrame API -->
-    <script src="https://www.youtube.com/iframe_api"></script>
     <!-- メインスクリプト -->
     <script src="operator-display.js"></script>
   </body>

@@ -3,22 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>リアルタイムクイズ - 参加者</title>
-    <link rel="stylesheet" href="style.css">
+    <title>新郎新婦のラブがスゴいクイズGP - 参加者</title>
+    <!-- 表示画面と同じテロップ風フォント -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="participant.css">
 </head>
 <body>
     <div class="container">
-        <h1>リアルタイムクイズ</h1>
+        <h1 class="logo"><img src="/title/logo.png" alt="新郎新婦のラブがスゴいクイズGP"></h1>
         <p id="status">サーバーに接続中...</p>
         <div id="countdown-container">
             <div id="countdown"></div>
         </div>
-        
+
         <div id="room-section" style="display: none;">
             <p>ルームIDを入力してください</p>
             <input type="text" id="roomIdInput" placeholder="ルームIDを入力">
             <button id="setRoomIdBtn">ルームに参加</button>
-            <p style="font-size: 0.9em; color: #999; margin-top: 10px;">
+            <p class="hint">
                 または、URLに ?roomId=ルームID を追加してください
             </p>
         </div>

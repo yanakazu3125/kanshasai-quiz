@@ -205,7 +205,7 @@ body {
 /* テキスト（画像が無い時に表示） */
 .page-display .option-text {
   display: none; /* ← デフォは非表示 */
-  font-size: clamp(16px, 2.4vw, 30px);
+  font-size: clamp(36px, 5.2vw, 76px);
   font-weight: 800;
   color: rgba(255, 255, 255, 0.9);
   text-align: center;
@@ -355,22 +355,49 @@ body {
   display: none !important;
 }
 
-/* ===== 終了・ランキング画面 ===== */
+/* ===== 終了・ランキング画面（問題画面と同じ感謝祭風テーマ） ===== */
 #quiz-end-message-area {
   display: none; /* 通常は非表示（JSで表示） */
   position: fixed;
   inset: 0;
-  padding: clamp(20px, 4vw, 60px);
-
-  /* 背景 */
-  background: rgba(6, 10, 28, 0.88);
-  backdrop-filter: blur(6px);
-
-  /* 中央寄せ */
+  z-index: 9999;
+  overflow: hidden;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 2.2vh;
+  padding: 4vh 4vw;
   text-align: center;
-  z-index: 9999;
+  font-family: "Dela Gothic One", "Hiragino Kaku Gothic StdN", "Meiryo",
+    sans-serif;
+  /* 問題画面と同じスタジオ背景 */
+  background: radial-gradient(
+      ellipse 70% 45% at 50% 0%,
+      rgba(120, 190, 255, 0.45),
+      transparent 70%
+    ),
+    radial-gradient(circle at 50% 60%, #1a4fd0 0%, #0a2270 45%, #040b33 100%);
+}
+
+/* 放射状のライトがゆっくり回る */
+#quiz-end-message-area::before {
+  content: "";
+  position: absolute;
+  inset: -50%;
+  z-index: 0;
+  pointer-events: none;
+  background: repeating-conic-gradient(
+    from 0deg at 50% 50%,
+    rgba(255, 255, 255, 0.07) 0deg 5deg,
+    transparent 5deg 15deg
+  );
+  -webkit-mask-image: radial-gradient(circle, #000 0%, transparent 60%);
+  mask-image: radial-gradient(circle, #000 0%, transparent 60%);
+  animation: kz-beams 80s linear infinite;
+}
+#quiz-end-message-area > * {
+  position: relative;
+  z-index: 1;
 }
 
 /* JSが quiz-ended-layout を付ける想定ならここで確実に出す */
@@ -378,87 +405,218 @@ body {
   display: flex !important;
 }
 
+/* サーバーからの終了メッセージ（小さめの白テロップ） */
 #final-message {
-  margin: 0 0 18px;
-  font-weight: 900;
-  font-size: clamp(28px, 4vw, 56px);
-  letter-spacing: 0.02em;
-  color: #ffffff;
+  margin: 0;
+  font-size: 3.4vh;
+  color: #fff;
+  letter-spacing: 0.08em;
+  -webkit-text-stroke: 0.12em #051446;
+  paint-order: stroke fill;
 }
 
 #ranking-area {
-  width: min(900px, 92vw);
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 18px;
-  padding: clamp(18px, 3vw, 32px);
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+  width: min(1400px, 90vw);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2.6vh;
 }
 
+/* 「最終ランキング」：金のテロップ */
 #ranking-area h2 {
-  margin: 0 0 18px;
-  font-size: clamp(22px, 3vw, 34px);
-  font-weight: 900;
-  color: rgba(255, 255, 255, 0.92);
+  margin: 0;
+  font-weight: 400;
+  font-size: 9vh;
+  line-height: 1.1;
+  letter-spacing: 0.06em;
+  color: #ffe45c;
+  background: linear-gradient(180deg, #fff6c2 0%, #ffd23a 45%, #e08a00 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 0.08em #7a4d00) drop-shadow(0 0 0.04em #3a1f00)
+    drop-shadow(0 0.08em 0 #3a1f00) drop-shadow(0 0 0.5em rgba(255, 200, 40, 0.55));
 }
 
-/* 箇条書きを消して「ランキングカード」化 */
 #ranking-list {
   list-style: none;
-  padding: 0;
   margin: 0;
-  display: grid;
-  gap: 12px;
-}
-
-#ranking-list li {
+  padding: 0;
+  width: 100%;
   display: flex;
+  flex-direction: column;
+  gap: 2vh;
+}
+
+/* 1行＝金縁の光沢パネル（問題画面の選択肢と同じ作り） */
+#ranking-list li {
+  --row-h: 10.5vh;
+  display: grid;
+  grid-template-columns: calc(var(--row-h) * 1.25) 1fr auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-
-  padding: 14px 16px;
-  border-radius: 14px;
-
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #ffffff;
-
-  font-size: clamp(16px, 2vw, 22px);
-  font-weight: 800;
+  gap: 2vw;
+  height: var(--row-h);
+  padding: 0 2.4vw 0 1vw;
+  border-radius: 999px;
+  color: #fff;
+  background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.28) 0%,
+      rgba(255, 255, 255, 0.06) 46%,
+      rgba(255, 255, 255, 0) 50%
+    ),
+    linear-gradient(180deg, #2a55d8 0%, #0f2c96 60%, #0a1d63 100%);
+  box-shadow: 0 0 0 0.3vh #fff, 0 0 0 0.75vh #ffc928, 0 0 0 0.95vh #7a4d00,
+    0 1vh 2vh rgba(0, 0, 0, 0.5);
+  /* 下位から順に登場（遅延はJSの --i で指定） */
+  animation: rank-in 0.6s cubic-bezier(0.18, 0.89, 0.32, 1.28) both;
+  animation-delay: calc(var(--i, 0) * 0.45s);
+}
+@keyframes rank-in {
+  0% {
+    transform: translateX(-12vw) scale(0.8);
+    opacity: 0;
+  }
+  100% {
+    transform: none;
+    opacity: 1;
+  }
 }
 
-/* 1〜3位だけ少し強調 */
-#ranking-list li:nth-child(1) {
-  background: rgba(255, 215, 0, 0.15);
-  border-color: rgba(255, 215, 0, 0.25);
+/* 順位バッジ */
+#ranking-list .rank-badge {
+  justify-self: center;
+  display: grid;
+  place-items: center;
+  width: calc(var(--row-h) * 0.82);
+  height: calc(var(--row-h) * 0.82);
+  border-radius: 50%;
+  font-size: calc(var(--row-h) * 0.46);
+  line-height: 1;
+  color: #fff;
+  -webkit-text-stroke: 0.1em rgba(0, 0, 0, 0.55);
+  paint-order: stroke fill;
+  background: linear-gradient(180deg, #5b78e0, #1b2f86);
+  box-shadow: inset 0 0.5vh 0 rgba(255, 255, 255, 0.45),
+    inset 0 -0.6vh 0 rgba(0, 0, 0, 0.25), 0 0 0 0.3vh #fff;
 }
-#ranking-list li:nth-child(2) {
-  background: rgba(200, 200, 200, 0.14);
-  border-color: rgba(200, 200, 200, 0.22);
-}
-#ranking-list li:nth-child(3) {
-  background: rgba(205, 127, 50, 0.14);
-  border-color: rgba(205, 127, 50, 0.22);
+#ranking-list .rank-badge small {
+  font-size: 0.45em;
+  margin-top: -0.35em;
 }
 
-/* 「開始画面に戻る」ボタン */
+#ranking-list .rank-name {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-align: left;
+  font-size: calc(var(--row-h) * 0.48);
+  -webkit-text-stroke: 0.1em #051446;
+  paint-order: stroke fill;
+  text-shadow: 0 0.05em 0 #02092a;
+}
+
+/* 正解数：金のピル＋合計回答時間 */
+#ranking-list .rank-score {
+  display: flex;
+  align-items: baseline;
+  gap: 1vw;
+  padding: 0.5vh 1.6vw;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #fff3b0, #ffc928);
+  box-shadow: 0 0 0 0.25vh #fff, 0 0.4vh 0.8vh rgba(0, 0, 0, 0.4);
+  color: #3a1f00;
+  font-size: calc(var(--row-h) * 0.4);
+  white-space: nowrap;
+}
+#ranking-list .rank-score small {
+  font-size: 0.5em;
+}
+#ranking-list .rank-time {
+  font-size: 0.5em;
+  opacity: 0.75;
+}
+
+/* 1位：金色に光る・一回り大きく */
+#ranking-list li.rank-1 {
+  --row-h: 14vh;
+  background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.45) 0%,
+      rgba(255, 255, 255, 0.1) 46%,
+      rgba(255, 255, 255, 0) 50%
+    ),
+    linear-gradient(180deg, #ffe25a 0%, #ffb300 55%, #e07b00 100%);
+  animation: rank-in 0.8s cubic-bezier(0.18, 0.89, 0.32, 1.28) both,
+    rank-glow 1.2s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * 0.45s + 0.3s),
+    calc(var(--i, 0) * 0.45s + 1.1s);
+}
+#ranking-list li.rank-1 .rank-name {
+  -webkit-text-stroke-color: #7a2e00;
+}
+@keyframes rank-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0.3vh #fff, 0 0 0 0.75vh #ffc928, 0 0 0 0.95vh #7a4d00,
+      0 0 2vh rgba(255, 200, 40, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 0 0.3vh #fff, 0 0 0 0.75vh #ffc928, 0 0 0 0.95vh #7a4d00,
+      0 0 6vh rgba(255, 220, 80, 1);
+  }
+}
+
+/* メダル色の順位バッジ */
+#ranking-list li.rank-1 .rank-badge {
+  background: linear-gradient(180deg, #fff3a0, #e0a000);
+  -webkit-text-stroke-color: #7a3d00;
+}
+#ranking-list li.rank-2 .rank-badge {
+  background: linear-gradient(180deg, #ffffff, #9aa6b8);
+  -webkit-text-stroke-color: #3a4456;
+}
+#ranking-list li.rank-3 .rank-badge {
+  background: linear-gradient(180deg, #ffc58a, #b8621c);
+  -webkit-text-stroke-color: #5a2a00;
+}
+
+/* 参加者なし等のメッセージ行 */
+#ranking-list li.rank-empty {
+  display: block;
+  height: auto;
+  padding: 3vh;
+  text-align: center;
+  font-size: 4vh;
+}
+
+/* 「開始画面に戻る」：操作用なので右下に控えめに */
 #return-to-start-btn {
-  margin-top: 18px;
-  padding: 14px 18px;
-  border-radius: 14px;
-
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
-
-  font-weight: 900;
-  font-size: clamp(14px, 1.8vw, 18px);
+  position: absolute;
+  right: 2vw;
+  bottom: 2vh;
+  padding: 1vh 1.6vw;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(4, 11, 51, 0.55);
+  color: rgba(255, 255, 255, 0.75);
+  font-family: inherit;
+  font-size: 1.8vh;
   cursor: pointer;
 }
-
 #return-to-start-btn:hover {
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(4, 11, 51, 0.85);
+  color: #fff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #quiz-end-message-area::before,
+  #ranking-list li,
+  #ranking-list li.rank-1 {
+    animation: none;
+  }
 }
 
 /* === 参加用QR：中央・大きく === */
@@ -528,151 +686,909 @@ body {
   visibility: hidden;
 }
 
-/* ===== クイズ開始前の待機画面（QRコードと動画） ===== */
+/* ===== クイズ開始前の待機画面（参加用QRコード・感謝祭風テーマ） ===== */
 .pre-quiz-screen {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: #0f1220;
+  inset: 0;
+  z-index: 1000;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  font-family: "Dela Gothic One", "Hiragino Kaku Gothic StdN", "Meiryo",
+    sans-serif;
+  /* 問題画面・ランキングと同じスタジオ背景 */
+  background: radial-gradient(
+      ellipse 70% 45% at 50% 0%,
+      rgba(120, 190, 255, 0.45),
+      transparent 70%
+    ),
+    radial-gradient(circle at 50% 60%, #1a4fd0 0%, #0a2270 45%, #040b33 100%);
+}
+
+/* 放射状のライトがゆっくり回る */
+.pre-quiz-screen::before {
+  content: "";
+  position: absolute;
+  inset: -50%;
+  z-index: 0;
+  pointer-events: none;
+  background: repeating-conic-gradient(
+    from 0deg at 50% 50%,
+    rgba(255, 255, 255, 0.07) 0deg 5deg,
+    transparent 5deg 15deg
+  );
+  -webkit-mask-image: radial-gradient(circle, #000 0%, transparent 60%);
+  mask-image: radial-gradient(circle, #000 0%, transparent 60%);
+  animation: kz-beams 80s linear infinite;
 }
 
 .pre-quiz-screen.hidden {
   display: none;
 }
 
-.pre-quiz-content {
+/* ===== タイトル演出画面 ===== */
+.title-screen {
+  position: fixed;
+  inset: 0;
   width: 100%;
-  max-width: 1400px;
-  padding: 40px;
-  display: grid;
-  grid-template-columns: 1fr 2fr;
-  gap: 40px;
-  align-items: start;
+  height: 100%;
+  overflow: hidden;
+  background: #04122e;
+  z-index: 1500;
+  perspective: 1200px; /* 立体感の基準 */
 }
 
-.qr-section {
-  background: #151735;
-  padding: 30px;
-  border-radius: 12px;
+.title-screen.hidden {
+  display: none;
+}
+
+/* 背景動画：全画面ループ */
+.title-bg-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+
+/* ステージ（3D空間） */
+.title-stage {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  transform-style: preserve-3d;
+}
+
+/* 中央ロゴ：浮遊＋前後の立体的な揺れ */
+.title-logo {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(64vw, 900px);
+  height: auto;
+  transform-style: preserve-3d;
+  filter: drop-shadow(0 24px 40px rgba(0, 0, 0, 0.55));
+  animation: title-logo-float 6s ease-in-out infinite;
+}
+
+@keyframes title-logo-float {
+  0% {
+    transform: translate(-50%, -50%) translateZ(0) rotateX(6deg) rotateY(-8deg)
+      scale(1);
+  }
+  50% {
+    transform: translate(-50%, -54%) translateZ(80px) rotateX(-5deg)
+      rotateY(9deg) scale(1.04);
+  }
+  100% {
+    transform: translate(-50%, -50%) translateZ(0) rotateX(6deg) rotateY(-8deg)
+      scale(1);
+  }
+}
+
+/* 右下スーパーマン：飛んでくるような立体的な動き */
+.title-super {
+  position: absolute;
+  right: 4vw;
+  bottom: 2vh;
+  width: min(26vw, 380px);
+  height: auto;
+  transform-origin: center;
+  filter: drop-shadow(0 18px 30px rgba(0, 0, 0, 0.5));
+  animation: title-super-fly 5s ease-in-out infinite;
+}
+
+@keyframes title-super-fly {
+  0% {
+    transform: translate(0, 0) translateZ(0) rotateZ(-6deg) rotateY(10deg)
+      scale(1);
+  }
+  50% {
+    transform: translate(-28px, -40px) translateZ(120px) rotateZ(4deg)
+      rotateY(-8deg) scale(1.1);
+  }
+  100% {
+    transform: translate(0, 0) translateZ(0) rotateZ(-6deg) rotateY(10deg)
+      scale(1);
+  }
+}
+
+/* 左下の画像（管理画面で設定）：右下と左右対称にふわっと揺れる */
+.title-custom-image {
+  position: absolute;
+  left: 10vw;
+  bottom: 2vh;
+  max-width: min(26vw, 380px);
+  max-height: 42vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  transform-origin: center;
+  filter: drop-shadow(0 18px 30px rgba(0, 0, 0, 0.5));
+  animation: title-custom-float 5s ease-in-out infinite;
+  animation-delay: -2.5s;
+}
+.title-custom-image[hidden] {
+  display: none;
+}
+
+@keyframes title-custom-float {
+  0%,
+  100% {
+    transform: translate(0, 0) translateZ(0) rotateZ(6deg) rotateY(-10deg)
+      scale(1);
+  }
+  50% {
+    transform: translate(28px, -40px) translateZ(120px) rotateZ(-4deg)
+      rotateY(8deg) scale(1.1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .title-custom-image {
+    animation: none;
+  }
+}
+
+/* 開始ボタン */
+.title-start-btn {
+  position: absolute;
+  left: 50%;
+  bottom: 7vh;
+  transform: translateX(-50%);
+  z-index: 3;
+  padding: 18px 56px;
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #04122e;
+  background: linear-gradient(180deg, #ffe27a 0%, #f5b301 100%);
+  border: 3px solid #fff;
+  border-radius: 999px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), 0 0 24px rgba(255, 210, 80, 0.6);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  animation: title-btn-pulse 1.8s ease-in-out infinite;
+}
+
+.title-start-btn:hover {
+  transform: translateX(-50%) scale(1.06);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5), 0 0 32px rgba(255, 210, 80, 0.9);
+}
+
+@keyframes title-btn-pulse {
+  0%,
+  100% {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), 0 0 24px rgba(255, 210, 80, 0.6);
+  }
+  50% {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), 0 0 40px rgba(255, 210, 80, 1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .title-logo,
+  .title-super,
+  .title-start-btn {
+    animation: none;
+  }
+}
+
+/* ===== 問題タイトル画面（03） ===== */
+.qtitle-screen {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at center, #123a6b 0%, #04122e 80%);
+  z-index: 1600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.qtitle-screen.hidden {
+  display: none;
+}
+
+.qtitle-image {
+  width: min(60vw, 720px);
+  height: auto;
+  filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.6));
+  animation: qtitle-pop 0.6s cubic-bezier(0.18, 0.89, 0.32, 1.28) both,
+    qtitle-float 3.5s ease-in-out 0.6s infinite;
+}
+
+@keyframes qtitle-pop {
+  0% {
+    transform: scale(0.2) rotate(-12deg);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+@keyframes qtitle-float {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-18px) scale(1.03);
+  }
+}
+
+.qtitle-next-btn {
+  position: absolute;
+  left: 50%;
+  bottom: 7vh;
+  transform: translateX(-50%);
+  z-index: 2;
+  padding: 16px 52px;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #04122e;
+  background: linear-gradient(180deg, #ffe27a 0%, #f5b301 100%);
+  border: 3px solid #fff;
+  border-radius: 999px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), 0 0 24px rgba(255, 210, 80, 0.6);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.qtitle-next-btn:hover {
+  transform: translateX(-50%) scale(1.06);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5), 0 0 32px rgba(255, 210, 80, 0.9);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qtitle-image {
+    animation: none;
+  }
+}
+
+/* ===== ルール説明動画画面 ===== */
+.rule-screen {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  z-index: 1600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rule-screen.hidden {
+  display: none;
+}
+
+.rule-video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+}
+
+.rule-skip-btn {
+  position: absolute;
+  right: 3vw;
+  bottom: 4vh;
+  z-index: 2;
+  padding: 12px 32px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.55);
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.rule-skip-btn:hover {
+  background: rgba(0, 0, 0, 0.8);
+  transform: scale(1.05);
+}
+
+.pre-quiz-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2.6vh;
+  padding: 4vh 4vw;
   text-align: center;
 }
 
-.qr-section h2 {
-  color: #fff;
-  font-size: 24px;
-  margin-bottom: 20px;
+/* 「参加者はこちら」：金のテロップ（ランキング見出しと同じ） */
+.pre-quiz-title {
+  margin: 0;
+  font-weight: 400;
+  font-size: 9vh;
+  line-height: 1.1;
+  letter-spacing: 0.06em;
+  color: #ffe45c;
+  background: linear-gradient(180deg, #fff6c2 0%, #ffd23a 45%, #e08a00 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 0.08em #7a4d00) drop-shadow(0 0 0.04em #3a1f00)
+    drop-shadow(0 0.08em 0 #3a1f00) drop-shadow(0 0 0.5em rgba(255, 200, 40, 0.55));
 }
 
+/* QRコード：白地に白→金→焦げ茶の三重フチ */
 #qr-code-container {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 20px;
+  display: grid;
+  place-items: center;
+  padding: 2.2vh;
+  border-radius: 2.4vh;
+  background: #fff;
+  box-shadow: 0 0 0 0.3vh #fff, 0 0 0 0.75vh #ffc928, 0 0 0 0.95vh #7a4d00,
+    0 1.4vh 3vh rgba(0, 0, 0, 0.55);
+  animation: qr-glow 2.4s ease-in-out infinite;
+}
+@keyframes qr-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0.3vh #fff, 0 0 0 0.75vh #ffc928, 0 0 0 0.95vh #7a4d00,
+      0 0 2vh rgba(255, 200, 40, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 0 0.3vh #fff, 0 0 0 0.75vh #ffc928, 0 0 0 0.95vh #7a4d00,
+      0 0 5vh rgba(255, 220, 80, 0.9);
+  }
 }
 
 #qr-code-img {
-  width: 200px;
-  height: 200px;
-  background: #fff;
-  padding: 10px;
-  border-radius: 12px;
+  display: block;
+  width: 44vh;
+  height: 44vh;
+  image-rendering: pixelated;
 }
 
-.join-url-display {
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 14px;
-  word-break: break-all;
-  margin-top: 15px;
-  padding: 10px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-}
-
-.video-section {
-  background: #151735;
-  padding: 30px;
-  border-radius: 12px;
-}
-
-.video-section h2 {
+/* 白い極太テロップ */
+.pre-quiz-note {
+  margin: 0;
+  font-size: 3.6vh;
   color: #fff;
-  font-size: 24px;
-  margin-bottom: 20px;
-  text-align: center;
+  letter-spacing: 0.04em;
+  -webkit-text-stroke: 0.12em #051446;
+  paint-order: stroke fill;
 }
 
-#pre-quiz-video {
-  width: 100%;
-  max-width: 800px;
-  height: auto;
-  border-radius: 8px;
-  background: #000;
+/* 参加URL：紺のピル（QRが読めない人向け） */
+.join-url-display {
+  max-width: 80vw;
+  padding: 0.8vh 2vw;
+  border-radius: 999px;
+  background: rgba(4, 11, 51, 0.7);
+  box-shadow: 0 0 0 0.2vh rgba(255, 201, 40, 0.8);
+  color: rgba(255, 255, 255, 0.9);
+  font-family: system-ui, sans-serif;
+  font-size: 2vh;
+  word-break: break-all;
 }
 
-#youtube-player-container {
-  position: relative;
-  width: 100%;
-  max-width: 800px;
-  margin: 0 auto;
-}
-
-#youtube-player {
-  position: relative;
-  width: 100%;
-  max-width: 800px;
-  margin: 0 auto;
-  border-radius: 8px;
-  background: #000;
-  display: block;
-  /* YouTube IFrame APIが作成するiframeのサイズをそのまま使用 */
-}
-
-#youtube-player iframe {
-  width: 100%;
-  height: 100%;
-  border-radius: 8px;
-  display: block;
-  border: none;
-}
-
-.video-controls {
-  margin-top: 20px;
-  text-align: center;
-  display: flex;
-  gap: 15px;
-  justify-content: center;
-}
-
-.video-controls button {
-  padding: 12px 24px;
-  background: #61dafb;
-  color: #282c34;
-  border: none;
-  border-radius: 8px;
-  font-size: 16px;
-  font-weight: 600;
+/* 「クイズを始める」：操作用なので右下に控えめに */
+.pre-quiz-start-btn {
+  position: absolute;
+  z-index: 1;
+  right: 2vw;
+  bottom: 2vh;
+  padding: 1vh 1.6vw;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(4, 11, 51, 0.55);
+  color: rgba(255, 255, 255, 0.75);
+  font-family: inherit;
+  font-size: 1.8vh;
   cursor: pointer;
-  transition: background-color 0.3s;
+}
+.pre-quiz-start-btn:hover {
+  background: rgba(4, 11, 51, 0.85);
+  color: #fff;
 }
 
-.video-controls button:hover {
-  background: #21a1f1;
-}
-
-/* レスポンシブ対応 */
-@media (max-width: 1024px) {
-  .pre-quiz-content {
-    grid-template-columns: 1fr;
-    gap: 30px;
+@media (prefers-reduced-motion: reduce) {
+  .pre-quiz-screen::before,
+  #qr-code-container {
+    animation: none;
   }
-  
-  .qr-section,
-  .video-section {
-    max-width: 100%;
+}
+
+/* クイズ進行ボタン（開始・結果表示・次の問題・終了）は全て非表示（進行はEnterキー） */
+.page-display #startQuizBtnDisplay,
+.page-display #showResultsBtnDisplay,
+.page-display #nextQuestionBtnDisplay,
+.page-display #endQuizBtnDisplay {
+  display: none !important;
+}
+
+/* =====================================================================
+   クイズ本編の演出（常時ゆっくり動く背景 ＋ 問題切替時の登場アニメ）
+   ===================================================================== */
+
+/* 汎用：背景グラデーションをゆっくり動かす */
+@keyframes quiz-bg-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* 上部バー：濃紺〜紫がゆっくり流れる */
+.page-display #topbar {
+  background: linear-gradient(120deg, #151735, #241a4d, #10233f, #151735);
+  background-size: 300% 300%;
+  animation: quiz-bg-shift 12s ease infinite;
+}
+
+/* 選択肢エリアの背景：同系色でゆっくり流れる */
+.page-display #options {
+  background: linear-gradient(120deg, #202233, #2a1f45, #1a2540, #202233);
+  background-size: 300% 300%;
+  animation: quiz-bg-shift 14s ease infinite;
+}
+
+/* カウントダウン：脈打つ＋発光 */
+.page-display #countdown {
+  text-shadow: 0 0 18px rgba(255, 204, 0, 0.7);
+  animation: countdown-pulse 1s ease-in-out infinite;
+}
+@keyframes countdown-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.12);
+  }
+}
+
+/* 問題文の帯：うっすら動く光沢 */
+.page-display #question-area {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(120deg, #e9f7ff, #ffffff, #dff0ff, #e9f7ff);
+  background-size: 220% 220%;
+  animation: quiz-bg-shift 8s ease infinite;
+}
+
+/* A/B/C/D ラベル：やわらかく発光 */
+.page-display .option-label {
+  animation: label-glow 2.2s ease-in-out infinite;
+}
+@keyframes label-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 rgba(82, 214, 255, 0);
+  }
+  50% {
+    box-shadow: 0 0 16px rgba(82, 214, 255, 0.85);
+  }
+}
+
+/* ---- 問題切替時の登場アニメ（#quiz-container に .q-enter が付いた瞬間に再生） ---- */
+
+/* 問題文の帯が上から降りてくる */
+.page-display .container.q-enter #question-area {
+  animation: quiz-bg-shift 8s ease infinite,
+    q-band-in 0.6s cubic-bezier(0.18, 0.89, 0.32, 1.28) both;
+}
+@keyframes q-band-in {
+  0% {
+    transform: translateY(-48px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* 問題文がポップイン */
+.page-display .container.q-enter #question-text {
+  animation: q-text-in 0.55s ease both 0.12s;
+}
+@keyframes q-text-in {
+  0% {
+    transform: scale(0.85);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* 問題文も最初は隠しておき、最初のEnterキーで表示する
+   （.q-enter の登場アニメより優先させるため .container を含めて詳細度を上げる） */
+.page-display .container #question-text.text-pending {
+  animation: none;
+  opacity: 0;
+  visibility: hidden;
+}
+.page-display .container #question-text.text-revealed {
+  animation: q-text-in 0.55s ease both;
+}
+
+/* 選択肢は最初は隠しておき、Enterキーで問題文と一緒にまとめて表示する */
+.page-display #options .option.reveal-pending {
+  opacity: 0;
+  visibility: hidden;
+}
+.page-display #options .option.revealed {
+  animation: option-in 0.55s cubic-bezier(0.18, 0.89, 0.32, 1.28) both;
+}
+@keyframes option-in {
+  0% {
+    transform: scale(0.6) translateY(34px);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* 動きを抑える設定のユーザーには演出を止める */
+@media (prefers-reduced-motion: reduce) {
+  .page-display #topbar,
+  .page-display #options,
+  .page-display #question-area,
+  .page-display #countdown,
+  .page-display .option-label,
+  .page-display .container.q-enter #question-area,
+  .page-display .container.q-enter #question-text,
+  .page-display .container #question-text.text-revealed,
+  .page-display #options .option.revealed {
+    animation: none;
+  }
+  /* 動きを抑える設定でも、表示自体はできるようにする */
+  .page-display #options .option.revealed {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+/* =====================================================================
+   感謝祭風テーマ（問題画面）
+   スタジオ風の青背景＋金縁の光沢パネル＋極太テロップ文字。
+   上の既存スタイルを上書きしているので、このブロックを消せば元の見た目に戻る。
+   ===================================================================== */
+.page-display {
+  /* 縦長の画面でも崩れないよう、マーク類は縦横の小さい方を基準にする */
+  --kz-q-size: min(11vh, 8vw);
+  --kz-chip-size: min(12vh, 9vw);
+  --kz-font: "Dela Gothic One", "Hiragino Kaku Gothic StdN", "Meiryo",
+    sans-serif;
+  --kz-gold: #ffc928;
+  --kz-gold-dark: #7a4d00;
+  --kz-ink: #051446;
+  /* 白→金→焦げ茶の三重フチ（パネル共通） */
+  --kz-frame: 0 0 0 0.3vh #fff, 0 0 0 0.75vh var(--kz-gold),
+    0 0 0 0.95vh var(--kz-gold-dark);
+  /* 上半分が明るい光沢 */
+  --kz-gloss: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.28) 0%,
+    rgba(255, 255, 255, 0.06) 46%,
+    rgba(255, 255, 255, 0) 50%
+  );
+}
+
+/* ---- スタジオ背景 ---- */
+.page-display #quiz-container {
+  grid-template-rows: 11vh 19vh 1fr !important;
+  background: radial-gradient(
+        ellipse 70% 45% at 50% 0%,
+        rgba(120, 190, 255, 0.45),
+        transparent 70%
+      ),
+    radial-gradient(circle at 50% 60%, #1a4fd0 0%, #0a2270 45%, #040b33 100%) !important;
+}
+
+/* 放射状のライトがゆっくり回る */
+.page-display #quiz-container::before {
+  content: "";
+  position: absolute;
+  inset: -50%;
+  z-index: 0;
+  pointer-events: none;
+  background: repeating-conic-gradient(
+    from 0deg at 50% 50%,
+    rgba(255, 255, 255, 0.07) 0deg 5deg,
+    transparent 5deg 15deg
+  );
+  -webkit-mask-image: radial-gradient(circle, #000 0%, transparent 60%);
+  mask-image: radial-gradient(circle, #000 0%, transparent 60%);
+  animation: kz-beams 80s linear infinite;
+}
+@keyframes kz-beams {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.page-display #topbar,
+.page-display #question-area,
+.page-display #options {
+  position: relative;
+  z-index: 1;
+}
+
+/* ---- 上段：カウントダウンを金縁のバッジに ---- */
+.page-display #topbar {
+  background: transparent;
+  animation: none;
+}
+.page-display #countdown-container {
+  padding-left: 2.4vw;
+}
+.page-display #countdown {
+  min-width: 15vh;
+  margin-top: 1.4vh;
+  padding: 0.4vh 2.4vh;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #1c2f86, #0a1650);
+  box-shadow: var(--kz-frame), 0 0.8vh 1.6vh rgba(0, 0, 0, 0.5);
+  font-family: var(--kz-font);
+  font-weight: 400;
+  font-size: 7vh;
+  text-align: center;
+  -webkit-text-stroke: 0.12em #3a1f00;
+  paint-order: stroke fill;
+  text-shadow: 0 0 0.4em rgba(255, 200, 0, 0.7);
+}
+
+/* ---- 中段：問題文パネル ---- */
+.page-display #question-area,
+.page-display .container.q-enter #question-area {
+  margin: 1.4vh 2.4vw;
+  border-radius: 1.4vh;
+  background: var(--kz-gloss),
+    linear-gradient(180deg, #2f7bff 0%, #0d3fbf 55%, #082a8a 100%);
+  box-shadow: var(--kz-frame), 0 1.2vh 2.4vh rgba(0, 0, 0, 0.5),
+    inset 0 0 2vh rgba(0, 0, 0, 0.35);
+}
+/* 背景の流れるアニメは止め、問題切替時の登場アニメだけ残す */
+.page-display #question-area {
+  animation: none;
+}
+.page-display .container.q-enter #question-area {
+  animation: q-band-in 0.6s cubic-bezier(0.18, 0.89, 0.32, 1.28) both;
+}
+
+/* 左の赤い「Q」マーク */
+.page-display #question-area::before {
+  content: "Q";
+  position: absolute;
+  left: 1.2vw;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  width: var(--kz-q-size);
+  height: var(--kz-q-size);
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ff8a8a, #e0102a 55%, #8a0012);
+  box-shadow: 0 0 0 0.4vh #fff, 0 0 0 0.8vh var(--kz-gold),
+    0 0.6vh 1.2vh rgba(0, 0, 0, 0.5);
+  font-family: var(--kz-font);
+  font-size: calc(var(--kz-q-size) * 0.64);
+  line-height: 1;
+  color: #fff;
+  -webkit-text-stroke: 0.1em #5a0010;
+  paint-order: stroke fill;
+}
+
+/* パネルを斜めに光が走る */
+.page-display #question-area::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -30%;
+  width: 20%;
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    transparent,
+    rgba(255, 255, 255, 0.35),
+    transparent
+  );
+  transform: skewX(-20deg);
+  animation: kz-shine 5s ease-in-out infinite;
+}
+@keyframes kz-shine {
+  0%,
+  60% {
+    left: -30%;
+  }
+  100% {
+    left: 130%;
+  }
+}
+
+.page-display #question-text {
+  position: relative;
+  z-index: 1;
+  padding: 0 3vw 0 calc(var(--kz-q-size) + 3.4vw);
+  font-family: var(--kz-font);
+  font-weight: 400;
+  font-size: clamp(26px, 3.8vw, 76px);
+  line-height: 1.25;
+  color: #fff;
+  -webkit-text-stroke: 0.12em var(--kz-ink);
+  paint-order: stroke fill;
+  text-shadow: 0 0.06em 0 #031040, 0 0 0.4em rgba(80, 170, 255, 0.6);
+}
+
+/* ---- 下段：選択肢パネル ---- */
+.page-display #options {
+  background: transparent !important;
+  animation: none;
+  gap: 2.2vh 1.6vw !important;
+  padding: 1.4vh 2.4vw 2.6vh !important;
+}
+
+.page-display .option {
+  border-radius: 1.4vh;
+  background: var(--kz-gloss),
+    linear-gradient(180deg, #16318f 0%, #0a1d63 60%, #07154a 100%);
+  box-shadow: var(--kz-frame), 0 1vh 2vh rgba(0, 0, 0, 0.55),
+    inset 0 0 3vh rgba(0, 0, 0, 0.4);
+}
+
+/* A/B/C/D：色付きのボタン風チップ（左中央） */
+.page-display .option-label {
+  top: 50% !important;
+  left: 1.2vw !important;
+  transform: translateY(-50%);
+  width: var(--kz-chip-size);
+  height: var(--kz-chip-size);
+  display: grid !important;
+  place-items: center;
+  padding: 0 !important;
+  border-radius: 1.2vh !important;
+  font-family: var(--kz-font);
+  font-weight: 400;
+  font-size: calc(var(--kz-chip-size) * 0.66);
+  color: #fff;
+  -webkit-text-stroke: 0.1em rgba(0, 0, 0, 0.55);
+  paint-order: stroke fill;
+  box-shadow: inset 0 0.5vh 0 rgba(255, 255, 255, 0.45),
+    inset 0 -0.6vh 0 rgba(0, 0, 0, 0.25), 0 0 0 0.3vh #fff,
+    0 0.5vh 1vh rgba(0, 0, 0, 0.45);
+  animation: none;
+}
+.page-display .option[data-id="A"] .option-label {
+  background: linear-gradient(180deg, #ff6a78, #d10a24) !important;
+}
+.page-display .option[data-id="B"] .option-label {
+  background: linear-gradient(180deg, #5cb4ff, #0a4fd6) !important;
+}
+.page-display .option[data-id="C"] .option-label {
+  background: linear-gradient(180deg, #4fe083, #0a8a33) !important;
+}
+.page-display .option[data-id="D"] .option-label {
+  background: linear-gradient(180deg, #ffe45c, #d69a00) !important;
+}
+
+/* 画像・動画の選択肢ではチップを左上に小さく */
+.page-display .option.has-image .option-label,
+.page-display .option.has-video .option-label {
+  top: 1vh !important;
+  left: 1vh !important;
+  transform: none;
+  width: 7vh;
+  height: 7vh;
+  font-size: 4.6vh;
+}
+
+.page-display .option-text {
+  padding: 0 3% 0 calc(var(--kz-chip-size) + 2.4vw) !important;
+  font-family: var(--kz-font);
+  font-weight: 400;
+  font-size: clamp(30px, 4.6vw, 92px);
+  color: #fff;
+  -webkit-text-stroke: 0.1em var(--kz-ink);
+  paint-order: stroke fill;
+  text-shadow: 0 0.05em 0 #02092a;
+}
+
+/* 表示時のポップインを A→B→C→D と少しずつずらす（Enterは1回のまま） */
+.page-display #options .option[data-id="B"].revealed {
+  animation-delay: 0.08s;
+}
+.page-display #options .option[data-id="C"].revealed {
+  animation-delay: 0.16s;
+}
+.page-display #options .option[data-id="D"].revealed {
+  animation-delay: 0.24s;
+}
+
+/* ---- 結果発表：正解は金色に光る／不正解は暗く沈む ---- */
+.page-display #options .option.correct {
+  background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.45) 0%,
+      rgba(255, 255, 255, 0.1) 46%,
+      rgba(255, 255, 255, 0) 50%
+    ),
+    linear-gradient(180deg, #ffe25a 0%, #ffb300 55%, #e07b00 100%);
+  animation: kz-correct 1s ease-in-out infinite;
+}
+.page-display #options .option.correct .option-text {
+  -webkit-text-stroke-color: #7a2e00;
+}
+@keyframes kz-correct {
+  0%,
+  100% {
+    box-shadow: var(--kz-frame), 0 0 2vh rgba(255, 200, 40, 0.6);
+  }
+  50% {
+    box-shadow: var(--kz-frame), 0 0 5vh rgba(255, 220, 80, 1);
+  }
+}
+.page-display #options .option.incorrect {
+  background: var(--kz-gloss),
+    linear-gradient(180deg, #16318f 0%, #0a1d63 60%, #07154a 100%);
+  filter: grayscale(0.6) brightness(0.5);
+}
+
+/* 投票数：金のピル */
+.page-display .vote-count-display {
+  padding: 0.25em 0.9em !important;
+  border-radius: 999px !important;
+  background: linear-gradient(180deg, #fff3b0, var(--kz-gold)) !important;
+  box-shadow: 0 0 0 0.25vh #fff, 0 0.4vh 0.8vh rgba(0, 0, 0, 0.4);
+  font-family: var(--kz-font);
+  font-weight: 400;
+  font-size: clamp(18px, 2.4vw, 40px);
+  color: #3a1f00;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-display #quiz-container::before,
+  .page-display #question-area::after,
+  .page-display .container.q-enter #question-area,
+  .page-display #options .option.correct {
+    animation: none;
   }
 }

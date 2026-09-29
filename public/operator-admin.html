@@ -7,6 +7,67 @@
     <link rel="stylesheet" href="style.css" />
     <style>
       /* 管理画面用の追加CSS */
+
+      /* タイトル画像：左に操作、右にミニプレビュー */
+      .title-image-layout {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        align-items: flex-start;
+        justify-content: space-between;
+      }
+      .title-mini {
+        margin: 0;
+        width: min(360px, 100%);
+      }
+      /* 表示画面（16:9）の縮小版。配置は display.css のタイトル画面に合わせる */
+      .title-mini-screen {
+        position: relative;
+        aspect-ratio: 16 / 9;
+        overflow: hidden;
+        border-radius: 6px;
+        background: #04122e;
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2);
+      }
+      .title-mini-screen video {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .title-mini-screen img {
+        position: absolute;
+        height: auto;
+      }
+      .title-mini-logo {
+        top: 50%;
+        left: 50%;
+        width: 64%;
+        transform: translate(-50%, -55%);
+      }
+      .title-mini-super {
+        right: 4%;
+        bottom: 2%;
+        width: 26%;
+      }
+      .title-mini-custom {
+        left: 10%;
+        bottom: 2%;
+        max-width: 26%;
+        max-height: 42%;
+        width: auto;
+        object-fit: contain;
+      }
+      .title-mini-custom[hidden] {
+        display: none;
+      }
+      .title-mini figcaption {
+        margin-top: 6px;
+        font-size: 0.85em;
+        color: #bbb;
+        text-align: center;
+      }
       body {
         background-color: #36393f;
       }
@@ -183,22 +244,47 @@
         <p id="timer-status" style="margin-top: 10px; font-size: 0.9em; color: #bbb;"></p>
       </div>
 
-      <div id="bgm-settings" style="margin-top: 20px; padding: 15px; background-color: #4a4f5d; border-radius: 8px; text-align: left;">
-        <h2>BGM設定</h2>
-        <div style="margin-top: 10px;">
-          <label for="bgmFile">BGMファイル:</label>
-          <input id="bgmFile" type="file" accept="audio/*,video/*" style="margin-top: 5px; margin-bottom: 10px; display: block;" />
-          <button id="uploadBgmBtn" style="padding: 5px 15px; background-color: #61dafb; color: #282c34; border: none; border-radius: 5px; cursor: pointer;">
-            BGMをアップロード
-          </button>
-          <p id="bgm-status" style="margin-top: 10px; font-size: 0.9em; color: #bbb;"></p>
-          <div id="bgm-preview" style="margin-top: 10px; display: none;">
-            <p style="font-size: 0.9em; color: #61dafb;">現在のBGM:</p>
-            <audio id="bgm-preview-audio" controls style="width: 100%; margin-top: 5px;"></audio>
-            <button id="removeBgmBtn" style="margin-top: 10px; padding: 5px 15px; background-color: #e74c3c; color: white; border: none; border-radius: 5px; cursor: pointer;">
-              BGMを削除
+      <div id="title-image-settings" style="margin-top: 20px; padding: 15px; background-color: #4a4f5d; border-radius: 8px; text-align: left;">
+        <h2>タイトル画面の画像（左下）</h2>
+        <p style="font-size: 0.9em; color: #bbb;">タイトル画面の左下に表示します。背景が透明なPNGがおすすめです。</p>
+        <div class="title-image-layout">
+          <div style="margin-top: 10px;">
+            <label for="titleImageFile">画像ファイル:</label>
+            <input id="titleImageFile" type="file" accept="image/*" style="margin-top: 5px; margin-bottom: 10px; display: block;" />
+            <div style="margin-bottom: 12px;">
+              <label style="cursor: pointer;">
+                <input id="titleImageRemoveWhite" type="checkbox" />
+                白い背景を透明にする
+              </label>
+              <div style="margin-top: 6px; font-size: 0.9em;">
+                <label for="titleImageWhiteTolerance">抜く強さ:</label>
+                <input id="titleImageWhiteTolerance" type="range" min="5" max="120" value="40" disabled style="vertical-align: middle;" />
+              </div>
+              <p style="margin: 4px 0 0; font-size: 0.8em; color: #bbb;">
+                画像の外側から続く白だけを抜きます（内側の白は残ります）。白っぽい背景が残る時は強さを上げてください。
+              </p>
+            </div>
+            <button id="uploadTitleImageBtn" style="padding: 5px 15px; background-color: #61dafb; color: #282c34; border: none; border-radius: 5px; cursor: pointer;">
+              画像をアップロード
             </button>
+            <p id="title-image-status" style="margin-top: 10px; font-size: 0.9em; color: #bbb;"></p>
+            <div id="title-image-preview" style="margin-top: 10px; display: none;">
+              <button id="removeTitleImageBtn" style="padding: 5px 15px; background-color: #e74c3c; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                画像を削除
+              </button>
+            </div>
           </div>
+
+          <!-- タイトル画面のミニプレビュー（表示画面と同じ配置） -->
+          <figure class="title-mini">
+            <div class="title-mini-screen">
+              <video src="/title/bg-blue.mp4" autoplay loop muted playsinline></video>
+              <img class="title-mini-logo" src="/title/logo.png" alt="" />
+              <img class="title-mini-super" src="/title/super.png" alt="" />
+              <img id="title-image-preview-img" class="title-mini-custom" alt="タイトル画面の画像" hidden />
+            </div>
+            <figcaption id="title-mini-caption">プレビュー（画像なし）</figcaption>
+          </figure>
         </div>
       </div>
 

@@ -222,15 +222,15 @@ app.post(
   }
 );
 
-// BGMアップロードエンドポイント
+// タイトル画面（左下）の画像アップロードエンドポイント
 app.post(
-  "/api/upload-bgm",
+  "/api/upload-title-image",
   requireOperator, // 運用者認証が必要
-  uploadMemory.single("bgm"),
+  uploadMemory.single("image"),
   async (req, res) => {
     try {
       if (!req.file) {
-        return res.status(400).json({ message: "BGMファイルがありません" });
+        return res.status(400).json({ message: "画像がありません" });
       }
 
       const roomId = req.roomId; // requireOperatorミドルウェアで自動設定される
@@ -238,43 +238,43 @@ app.post(
         return res.status(400).json({ message: "ルームIDが取得できません" });
       }
 
-      console.log(`[${roomId}] BGMをアップロード中...`);
-      const result = await uploadBufferToCloudinary(req.file.buffer, roomId, "video"); // 音声ファイルもvideoリソースタイプでアップロード
-      console.log(`[${roomId}] BGMアップロード成功: ${result.secure_url}`);
-      
-      // OperatorのbgmUrlを更新
+      console.log(`[${roomId}] タイトル画像をアップロード中...`);
+      const result = await uploadBufferToCloudinary(req.file.buffer, roomId, "image");
+      console.log(`[${roomId}] タイトル画像アップロード成功: ${result.secure_url}`);
+
+      // OperatorのtitleImageUrlを更新
       const operator = await Operator.findOne({ roomId });
       if (operator) {
-        operator.bgmUrl = result.secure_url;
+        operator.titleImageUrl = result.secure_url;
         await operator.save();
-        console.log(`[${roomId}] BGM URLを保存しました`);
+        console.log(`[${roomId}] タイトル画像URLを保存しました`);
       }
-      
+
       res.json({ url: result.secure_url });
     } catch (err) {
-      console.error("BGMアップロードエラー:", err);
-      res.status(500).json({ message: "BGMアップロード失敗" });
+      console.error("タイトル画像アップロードエラー:", err);
+      res.status(500).json({ message: "タイトル画像アップロード失敗" });
     }
   }
 );
 
-// BGM削除エンドポイント
-app.delete("/api/operator/bgm", requireOperator, async (req, res) => {
+// タイトル画面（左下）の画像削除エンドポイント
+app.delete("/api/operator/title-image", requireOperator, async (req, res) => {
   try {
     const roomId = req.roomId;
     const operator = await Operator.findOne({ roomId });
-    
+
     if (operator) {
-      operator.bgmUrl = null;
+      operator.titleImageUrl = null;
       await operator.save();
-      console.log(`[${roomId}] BGMを削除しました`);
-      res.json({ message: "BGMを削除しました" });
+      console.log(`[${roomId}] タイトル画像を削除しました`);
+      res.json({ message: "タイトル画像を削除しました" });
     } else {
       res.status(404).json({ message: "運用者が見つかりません" });
     }
   } catch (err) {
-    console.error("BGM削除エラー:", err);
-    res.status(500).json({ message: "BGM削除失敗" });
+    console.error("タイトル画像削除エラー:", err);
+    res.status(500).json({ message: "タイトル画像削除失敗" });
   }
 });
 
@@ -298,6 +298,7 @@ class RoomState {
   answeredUserIds: new Set(),
 };
     this.isShowingResults = false;
+    this.answersOpen = false; // 回答受付中か（タイマー手動開始まで false）
     this.socketAnsweredFlags = new Map(); // Map<socket.id, boolean>
   }
 
@@ -319,6 +320,7 @@ class RoomState {
     answeredUserIds: new Set(),
   };
     this.isShowingResults = false;
+    this.answersOpen = false;
     this.socketAnsweredFlags.clear();
     console.log(`[${this.roomId}] ゲームの状態がリセットされました。`);
   }
@@ -376,6 +378,9 @@ function startQuestionTimer(roomId) {
   const roomState = getRoomState(roomId);
   if (roomState.quizTimer) clearInterval(roomState.quizTimer);
 
+  // タイマー（＝回答受付）開始
+  roomState.answersOpen = true;
+
   // 動画があるかどうかをチェック
   const hasVideo = roomState.currentQuestionData?.options?.some(
     (opt) => opt.videoUrl && opt.videoUrl.trim() !== ""
@@ -408,6 +413,7 @@ function startQuestionTimer(roomId) {
       console.log(`[${roomId}] 問題時間切れ！`);
 
       roomState.isShowingResults = false;
+      roomState.answersOpen = false; // 時間切れで回答受付を締め切る
       broadcastQuizStatus(roomId); // ステータスを更新
     }
   }, 1000);
@@ -476,13 +482,13 @@ app.post("/api/auth/operator/logout", (req, res) => {
 // 運用者ログイン状態確認
 app.get("/api/auth/operator/status", async (req, res) => {
   if (req.session && req.session.operatorId) {
-    // Operator情報を取得してBGM URLを含める
+    // Operator情報を取得してタイトル画像のURLを含める
     const operator = await Operator.findById(req.session.operatorId);
     res.json({
       isLoggedIn: true,
       roomId: req.session.roomId,
       username: req.session.username,
-      bgmUrl: operator?.bgmUrl || null,
+      titleImageUrl: operator?.titleImageUrl || null,
     });
   } else {
     res.json({ isLoggedIn: false });
@@ -1082,6 +1088,7 @@ io.on("connection", async (socket) => {
     
     if (
       !roomState.isQuizActive ||
+      !roomState.answersOpen ||
       roomState.currentRemainingTime <= 0 ||
       !roomState.currentQuestionData ||
       roomState.currentQuestionData._id.toString() !== data.questionId ||
@@ -1188,7 +1195,8 @@ io.on("connection", async (socket) => {
         console.log("コントローラーコマンドを受信:", commandData.type); // コントローラーコマンドのログ
 
         if (commandData.type === "startQuiz") {
-          if (roomState.isQuizActive) return;
+          // restart: 途中のまま残っているクイズを破棄して最初から始める
+          if (roomState.isQuizActive && !commandData.restart) return;
           await loadQuestions(roomId);
           roomState.resetGameState();
           roomState.isQuizActive = true;
@@ -1256,8 +1264,38 @@ io.on("connection", async (socket) => {
             });
           }
           console.log(`[${roomId}] クイズを開始しました。最初の問題を送信。`);
-          startQuestionTimer(roomId);
+          // タイマーは自動開始しない（コントローラーの startTimer コマンドで開始）
+          roomState.currentRemainingTime = roomState.QUESTION_DURATION;
           roomState.isShowingResults = false;
+          roomState.answersOpen = false; // タイマー開始まで回答を受け付けない
+          broadcastQuizStatus(roomId);
+        } else if (commandData.type === "resyncQuestion") {
+          // 表示画面の再読み込み後などに、進行中の問題をこのコントローラーへ送り直す
+          if (!roomState.isQuizActive || !roomState.currentQuestionData) return;
+          socket.emit("question", {
+            id: roomState.currentQuestionData._id.toString(),
+            text: roomState.currentQuestionData.text,
+            options: roomState.currentQuestionData.options,
+            resume: {
+              timerStarted:
+                roomState.answersOpen ||
+                roomState.isShowingResults ||
+                roomState.currentRemainingTime < roomState.QUESTION_DURATION,
+            },
+          });
+          if (roomState.isShowingResults) {
+            socket.emit("showQuestionResults", {
+              questionId: roomState.currentQuestionResults.questionId,
+              totalVotes: roomState.currentQuestionResults.totalVotes,
+              optionVotes: roomState.currentQuestionResults.optionVotes,
+              correctOptionId: roomState.currentQuestionResults.correctOptionId,
+            });
+          }
+        } else if (commandData.type === "startTimer") {
+          // 選択肢を出し切った後、コントローラーが手動でタイマーを開始する
+          if (!roomState.isQuizActive) return;
+          console.log(`[${roomId}] コントローラーがタイマーを開始しました。`);
+          startQuestionTimer(roomId);
         } else if (commandData.type === "nextQuestion") {
           if (!roomState.isQuizActive) return;
 
@@ -1331,7 +1369,11 @@ io.on("connection", async (socket) => {
               });
             }
             console.log(`[${roomId}] 次の問題を送信しました。`);
-            startQuestionTimer(roomId);
+            // タイマーは自動開始しない（コントローラーの startTimer コマンドで開始）
+            roomState.currentRemainingTime = roomState.QUESTION_DURATION;
+            roomState.isShowingResults = false;
+            roomState.answersOpen = false; // タイマー開始まで回答を受け付けない
+            broadcastQuizStatus(roomId);
           } else {
             await updateScoresForCurrentQuestion(roomId);
 
@@ -1457,6 +1499,7 @@ io.on("connection", async (socket) => {
           }
           console.log(`[${roomId}] 結果表示コマンドを受信しました。`);
           roomState.isShowingResults = true;
+          roomState.answersOpen = false; // 結果表示で回答受付を締め切る
           broadcastQuestionResults(roomId);
           console.log(`[${roomId}] showResultsイベントをクライアントに送信しました。`);
         } else if (commandData.type === "resetQuizState") {

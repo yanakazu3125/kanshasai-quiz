@@ -1,0 +1,392 @@
+/* =====================================================================
+   参加者（スマホ）画面：感謝祭風テーマ
+   表示画面（display.css）と同じ青いスタジオ背景・金縁パネル・極太テロップ文字。
+   ===================================================================== */
+:root {
+  --kz-font: "Dela Gothic One", "Hiragino Kaku Gothic StdN", "Meiryo",
+    sans-serif;
+  --kz-gold: #ffc928;
+  --kz-gold-dark: #7a4d00;
+  --kz-ink: #051446;
+  /* 白→金→焦げ茶の三重フチ */
+  --kz-frame: 0 0 0 2px #fff, 0 0 0 5px var(--kz-gold),
+    0 0 0 7px var(--kz-gold-dark);
+  /* 上半分が明るい光沢 */
+  --kz-gloss: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.28) 0%,
+    rgba(255, 255, 255, 0.06) 46%,
+    rgba(255, 255, 255, 0) 50%
+  );
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 16px 16px 32px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  overflow-x: hidden;
+  font-family: var(--kz-font);
+  color: #fff;
+  background: radial-gradient(
+      ellipse 90% 40% at 50% 0%,
+      rgba(120, 190, 255, 0.45),
+      transparent 70%
+    ),
+    radial-gradient(circle at 50% 55%, #1a4fd0 0%, #0a2270 50%, #040b33 100%)
+      fixed;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 放射状のライトがゆっくり回る */
+body::before {
+  content: "";
+  position: fixed;
+  inset: -50%;
+  z-index: -1;
+  pointer-events: none;
+  background: repeating-conic-gradient(
+    from 0deg at 50% 50%,
+    rgba(255, 255, 255, 0.07) 0deg 5deg,
+    transparent 5deg 15deg
+  );
+  -webkit-mask-image: radial-gradient(circle, #000 0%, transparent 60%);
+  mask-image: radial-gradient(circle, #000 0%, transparent 60%);
+  animation: kz-beams 80s linear infinite;
+}
+@keyframes kz-beams {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.container {
+  width: 100%;
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+}
+
+/* ---- ロゴ ---- */
+.logo {
+  margin: 0;
+  width: min(58%, 260px);
+}
+.logo img {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.45));
+}
+
+/* 接続状態：小さな紺のピル */
+#status {
+  margin: 0;
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: rgba(4, 11, 51, 0.6);
+  box-shadow: 0 0 0 1px rgba(255, 201, 40, 0.6);
+  font-family: system-ui, sans-serif;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* 白い極太テロップ（共通） */
+.telop,
+#room-section > p:first-child,
+#nickname-section > p:first-child {
+  margin: 0 0 12px;
+  font-size: 18px;
+  letter-spacing: 0.04em;
+  -webkit-text-stroke: 4px var(--kz-ink);
+  paint-order: stroke fill;
+}
+
+/* ---- ルームID・ニックネーム入力：金縁パネル ---- */
+#room-section,
+#nickname-section {
+  width: 100%;
+  padding: 20px 18px;
+  border-radius: 18px;
+  background: var(--kz-gloss),
+    linear-gradient(180deg, #2a55d8 0%, #0f2c96 60%, #0a1d63 100%);
+  box-shadow: var(--kz-frame), 0 8px 18px rgba(0, 0, 0, 0.5);
+}
+
+#room-section input,
+#nickname-section input {
+  display: block;
+  width: 100%;
+  margin: 0 0 14px;
+  padding: 14px 16px;
+  border: none;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: inset 0 3px 0 rgba(0, 0, 0, 0.12), 0 0 0 3px var(--kz-gold);
+  font-family: system-ui, sans-serif;
+  font-size: 18px; /* 16px以上でiPhoneの自動ズームを防ぐ */
+  font-weight: 700;
+  color: var(--kz-ink);
+  text-align: center;
+}
+#room-section input:focus,
+#nickname-section input:focus {
+  outline: none;
+  box-shadow: inset 0 3px 0 rgba(0, 0, 0, 0.12), 0 0 0 3px #fff,
+    0 0 0 6px var(--kz-gold);
+}
+
+/* 金の押しボタン */
+#setRoomIdBtn,
+#setNicknameBtn {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #fff3b0 0%, #ffd23a 45%, #e08a00 100%);
+  box-shadow: 0 0 0 2px #fff, 0 5px 0 var(--kz-gold-dark),
+    0 8px 14px rgba(0, 0, 0, 0.4);
+  font-family: var(--kz-font);
+  font-size: 20px;
+  letter-spacing: 0.1em;
+  color: #3a1f00;
+  cursor: pointer;
+  transition: transform 0.08s, box-shadow 0.08s;
+}
+#setRoomIdBtn:active,
+#setNicknameBtn:active {
+  transform: translateY(4px);
+  box-shadow: 0 0 0 2px #fff, 0 1px 0 var(--kz-gold-dark),
+    0 3px 6px rgba(0, 0, 0, 0.4);
+}
+
+#room-section .hint {
+  margin: 12px 0 0;
+  font-family: system-ui, sans-serif;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* ---- カウントダウン：金縁の丸バッジ ---- */
+#countdown-container {
+  display: none; /* 問題が来たらJSで表示 */
+}
+#countdown {
+  width: 84px;
+  height: 84px;
+  margin: 4px auto 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #1c2f86, #0a1650);
+  box-shadow: var(--kz-frame), 0 6px 12px rgba(0, 0, 0, 0.5);
+  font-size: 44px;
+  line-height: 1;
+  color: #ffda6a;
+  -webkit-text-stroke: 5px #3a1f00;
+  paint-order: stroke fill;
+}
+#countdown:empty {
+  display: none;
+}
+#countdown.is-hurry {
+  color: #ff4d5e;
+  animation: countdown-pulse 0.5s ease-in-out infinite alternate;
+}
+#countdown.is-timeup {
+  color: #ff9a2e;
+}
+@keyframes countdown-pulse {
+  to {
+    transform: scale(1.12);
+  }
+}
+
+/* ---- 問題：金縁の光沢パネル ---- */
+#question-area {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+#question-text {
+  margin: 0;
+  padding: 18px 16px;
+  border-radius: 18px;
+  background: var(--kz-gloss),
+    linear-gradient(180deg, #2a55d8 0%, #0f2c96 60%, #0a1d63 100%);
+  box-shadow: var(--kz-frame), 0 8px 18px rgba(0, 0, 0, 0.5);
+  font-size: 20px;
+  line-height: 1.5;
+  -webkit-text-stroke: 4px var(--kz-ink);
+  paint-order: stroke fill;
+  word-break: break-word;
+}
+
+/* ---- 選択肢：A〜Dの色チップ付きの押しボタン ---- */
+#options {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+#options:empty {
+  display: none;
+}
+
+.option-button {
+  position: relative;
+  width: 100%;
+  min-height: 64px;
+  padding: 12px 16px 12px 70px;
+  border: none;
+  border-radius: 16px;
+  background: var(--kz-gloss),
+    linear-gradient(180deg, #16318f 0%, #0a1d63 60%, #07154a 100%);
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--kz-gold), 0 5px 0 4px var(--kz-gold-dark),
+    0 10px 14px rgba(0, 0, 0, 0.45);
+  font-family: var(--kz-font);
+  font-size: 19px;
+  line-height: 1.35;
+  color: #fff;
+  text-align: left;
+  -webkit-text-stroke: 3px var(--kz-ink);
+  paint-order: stroke fill;
+  word-break: break-word;
+  cursor: pointer;
+  transition: transform 0.08s, filter 0.2s;
+}
+
+/* 左端の A〜D チップ（表示画面と同じ色） */
+.option-button::before {
+  content: attr(data-option);
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  font-size: 30px;
+  -webkit-text-stroke: 3px rgba(0, 0, 0, 0.55);
+  paint-order: stroke fill;
+  box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.25), 0 0 0 2px #fff;
+}
+.option-button[data-option="A"]::before {
+  background: linear-gradient(180deg, #ff6a78, #d10a24);
+}
+.option-button[data-option="B"]::before {
+  background: linear-gradient(180deg, #5cb4ff, #0a4fd6);
+}
+.option-button[data-option="C"]::before {
+  background: linear-gradient(180deg, #4fe083, #0a8a33);
+}
+.option-button[data-option="D"]::before {
+  background: linear-gradient(180deg, #ffe45c, #d69a00);
+}
+
+.option-button:not(:disabled):active {
+  transform: translateY(4px);
+}
+
+/* 回答後・時間切れ：選ばなかった選択肢は暗く沈む */
+.option-button:disabled {
+  cursor: default;
+  filter: grayscale(0.6) brightness(0.55);
+}
+
+/* 自分が選んだ選択肢：金色に光る */
+.option-button.selected,
+.option-button.selected:disabled {
+  filter: none;
+  background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.45) 0%,
+      rgba(255, 255, 255, 0.1) 46%,
+      rgba(255, 255, 255, 0) 50%
+    ),
+    linear-gradient(180deg, #ffe25a 0%, #ffb300 55%, #e07b00 100%);
+  -webkit-text-stroke-color: #7a2e00;
+  animation: selected-glow 1s ease-in-out infinite;
+}
+@keyframes selected-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--kz-gold),
+      0 5px 0 4px var(--kz-gold-dark), 0 0 12px rgba(255, 200, 40, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--kz-gold),
+      0 5px 0 4px var(--kz-gold-dark), 0 0 26px rgba(255, 220, 80, 1);
+  }
+}
+
+/* ---- メッセージ・正解数 ---- */
+#feedback {
+  margin: 0;
+  min-height: 1.5em;
+  font-size: 17px;
+  -webkit-text-stroke: 4px var(--kz-ink);
+  paint-order: stroke fill;
+}
+#feedback:empty {
+  display: none;
+}
+#feedback.is-sent {
+  color: #9fe0ff;
+}
+#feedback.is-warn {
+  color: #ffe45c;
+}
+#feedback.is-timeup {
+  color: #ff9a2e;
+}
+#feedback.is-final {
+  padding: 16px 22px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #fff3b0, var(--kz-gold));
+  box-shadow: 0 0 0 2px #fff, 0 6px 12px rgba(0, 0, 0, 0.4);
+  color: #3a1f00;
+  font-size: 22px;
+  -webkit-text-stroke: 0;
+}
+
+/* 正解数：金のピル */
+#my-score {
+  margin: 4px 0 0;
+  padding: 6px 18px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #fff3b0, var(--kz-gold));
+  box-shadow: 0 0 0 2px #fff, 0 4px 8px rgba(0, 0, 0, 0.4);
+  font-size: 16px;
+  color: #3a1f00;
+}
+#my-score:empty {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body::before,
+  #countdown.is-hurry,
+  .option-button.selected {
+    animation: none;
+  }
+}
