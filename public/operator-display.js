@@ -460,7 +460,12 @@ function handleQuizEnter() {
     return true;
   }
 
-  // ended など：何もしない
+  // 6) 最終ランキング：上位を下の順位から1人ずつ発表
+  if (quizPhase === "ended") {
+    return revealNextRank();
+  }
+
+  // それ以外：何もしない
   return false;
 }
 
@@ -729,14 +734,19 @@ function setupSocketHandlers() {
     console.log("[quizEnded] finalRanking:", data.finalRanking);
     if (data.finalRanking && data.finalRanking.length > 0) {
       console.log("[quizEnded] ランキングを表示します");
-      renderRanking(data.finalRanking);
-      rankingArea.style.display = "block";
+      renderRanking(data.finalRanking, data.rankingRevealCount ?? 5);
+      rankingArea.style.display = "flex";
     } else {
       console.log("[quizEnded] ランキングデータがありません（参加者がいない可能性があります）");
       // 参加者がいない場合でも、ランキングエリアを表示してメッセージを表示
       rankingList.innerHTML =
         '<li class="rank-empty">参加者がいませんでした。</li>';
-      rankingArea.style.display = "block";
+      rankingRollList.innerHTML = "";
+      rankingRoll.hidden = true;
+      rankingList.hidden = false;
+      rankingRevealQueue = [];
+      if (rankingHint) rankingHint.hidden = true;
+      rankingArea.style.display = "flex";
     }
 
     returnToStartBtn.style.display = "inline-block";
@@ -963,43 +973,220 @@ function setupEventListeners() {
   };
 }
 
+// ---- 最終ランキング ----
+// 1) 下位（revealCount 位より下）を、最下位から順に下から上へ流す（エンドロール風）
+// 2) 流れ終わったら下位は消え、上位の枠（「？？？」）だけが残る
+// 3) 上位はEnterで下の順位から1人ずつ発表する（流れている途中のEnterはロールを飛ばす）
+const rankingRoll = document.getElementById("ranking-roll");
+const rankingRollList = document.getElementById("ranking-roll-list");
+const rankingHint = document.getElementById("ranking-hint");
+let rankingRevealQueue = []; // まだ発表していない上位の行（発表する順）
+let rankingRollAnimation = null; // 下位を流しているアニメーション（流れていなければ null）
+
+// 上位の1行（発表前は名前を「？？？」にして、データは行に持たせておく）
+function createTopRankRow(entry, rank) {
+  const li = document.createElement("li");
+  li.className = `rank-${rank} is-hidden`;
+  li._entry = entry;
+
+  const badge = document.createElement("span");
+  badge.className = "rank-badge";
+  badge.innerHTML = `${rank}<small>位</small>`;
+
+  const name = document.createElement("span");
+  name.className = "rank-name";
+  name.textContent = "？？？";
+
+  const score = document.createElement("span");
+  score.className = "rank-score";
+
+  li.append(badge, name, score);
+  return li;
+}
+
+// 上位の1行を発表する
+function revealTopRankRow(li) {
+  const entry = li._entry;
+  // ニックネームは参加者の入力なので textContent で入れる
+  li.querySelector(".rank-name").textContent = entry.nickname || "匿名";
+  const score = li.querySelector(".rank-score");
+  score.innerHTML = `${Number(entry.score) || 0}<small>問正解</small>`;
+  if (typeof entry.totalAnswerTime === "number") {
+    const time = document.createElement("span");
+    time.className = "rank-time";
+    time.textContent = `${Math.round(entry.totalAnswerTime * 10) / 10}秒`;
+    score.appendChild(time);
+  }
+  li.classList.remove("is-hidden");
+  li.classList.add("is-revealed");
+}
+
+// Enterで次へ進める。進めたら true
+// （下位が流れている間はロールを飛ばし、その後は上位を1人ずつ発表）
+function revealNextRank() {
+  if (rankingRollAnimation) {
+    endLowerRankRoll();
+    return true;
+  }
+  const li = rankingRevealQueue.shift();
+  if (!li) return false;
+  revealTopRankRow(li);
+  // 発表した行が見える位置までスクロール（1位の時は一番上まで戻す）
+  if (li === rankingList.firstElementChild) {
+    rankingList.scrollTo({ top: 0, behavior: "smooth" });
+  } else {
+    li.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+  playSe(answerSe);
+  if (rankingHint) rankingHint.hidden = rankingRevealQueue.length === 0;
+  return true;
+}
+
+// 下位のロールを終わらせて上位の枠を出す（最後まで流れた時・Enterで飛ばした時）
+function endLowerRankRoll() {
+  if (!rankingRollAnimation) return;
+  const animation = rankingRollAnimation;
+  rankingRollAnimation = null;
+  animation.onfinish = null;
+  animation.cancel();
+  showTopRanks();
+}
+
+// 上位の枠を出す（下位のロールが終わった後）
+function showTopRanks() {
+  rankingRollAnimation = null;
+  rankingRoll.hidden = true;
+  rankingRollList.innerHTML = "";
+  rankingList.hidden = false;
+  rankingList.classList.remove("is-entering");
+  void rankingList.offsetWidth; // 登場アニメを再生し直す
+  rankingList.classList.add("is-entering");
+  rankingList.scrollTop = rankingList.scrollHeight;
+  if (rankingHint) rankingHint.hidden = rankingRevealQueue.length === 0;
+}
+
+// 下位を、上が良い順位・下が悪い順位の普通の並びで用意し、
+// 最下位から1人ずつ下から浮かび上がらせながら、上の順位へたどっていく。
+// 終わったら上位の枠を出す（rankingRollAnimation は cancel() で止められるタイマー）
+function rollLowerRanks(entries) {
+  rankingRollList.innerHTML = "";
+  entries.forEach((entry) => {
+    const li = document.createElement("li");
+
+    const rank = document.createElement("span");
+    rank.className = "roll-rank";
+    rank.textContent = `${entry.rank}位`;
+
+    const name = document.createElement("span");
+    name.className = "roll-name";
+    name.textContent = entry.nickname || "匿名";
+
+    const score = document.createElement("span");
+    score.className = "roll-score";
+    score.textContent = `${Number(entry.score) || 0}問正解`;
+
+    li.append(rank, name, score);
+    rankingRollList.appendChild(li);
+  });
+
+  rankingRoll.hidden = false;
+  const items = Array.from(rankingRollList.children);
+  const boxH = rankingRoll.clientHeight;
+  const listH = rankingRollList.scrollHeight;
+  // 最初は一覧の下端を枠の下の方にそろえる（最下位が一番下に来る。下端のふわっと消える部分は避ける）
+  let offset = boxH * 0.88 - listH;
+  rankingRollList.style.transition = "none";
+  rankingRollList.style.transform = `translateY(${offset}px)`;
+  void rankingRollList.offsetWidth;
+  rankingRollList.style.transition = "";
+
+  // 1人あたりの間隔（全体で短くても4秒、長くても20秒）
+  const step = Math.min(20000, Math.max(4000, entries.length * 400)) / entries.length;
+  let index = items.length - 1; // 最下位から
+  let timer = null;
+  let endTimer = null;
+
+  const tick = () => {
+    if (index < 0) {
+      clearInterval(timer);
+      timer = null;
+      // 最後の1人を少し見せてから上位の枠へ
+      endTimer = setTimeout(() => {
+        if (rankingRollAnimation === roll) endLowerRankRoll();
+      }, 1200);
+      return;
+    }
+    const li = items[index];
+    li.classList.add("is-shown");
+    // 出てきた行が枠の上にはみ出す時は、一覧を下へずらして見えるようにする（＝上の順位へ進む）
+    const margin = rankingRoll.clientHeight * 0.12; // 上端のふわっと消える部分は避ける
+    if (li.offsetTop + offset < margin) {
+      offset = margin - li.offsetTop;
+      rankingRollList.style.transform = `translateY(${offset}px)`;
+    }
+    index--;
+  };
+
+  const roll = {
+    onfinish: null,
+    cancel() {
+      if (timer) clearInterval(timer);
+      if (endTimer) clearTimeout(endTimer);
+      timer = null;
+      endTimer = null;
+    },
+  };
+  rankingRollAnimation = roll;
+  tick();
+  timer = setInterval(tick, step);
+}
+
 //ランキングを描画する関数
-function renderRanking(ranking) {
+function renderRanking(ranking, revealCount = 5) {
+  if (rankingRollAnimation) {
+    rankingRollAnimation.onfinish = null;
+    rankingRollAnimation.cancel();
+    rankingRollAnimation = null;
+  }
   rankingList.innerHTML = "";
+  rankingRollList.innerHTML = "";
+  rankingRoll.hidden = true;
+  rankingRevealQueue = [];
+  if (rankingHint) rankingHint.hidden = true;
+
   if (ranking.length === 0) {
+    rankingList.hidden = false;
     rankingList.innerHTML =
       '<li class="rank-empty">ランキングデータがありません。</li>';
     return;
   }
-  ranking.forEach((entry, index) => {
-    const rank = index + 1;
-    const li = document.createElement("li");
-    li.className = `rank-${rank}`;
-    // 下位から順に登場させ、1位を最後に出す
-    li.style.setProperty("--i", ranking.length - 1 - index);
 
-    const badge = document.createElement("span");
-    badge.className = "rank-badge";
-    badge.innerHTML = `${rank}<small>位</small>`;
+  // 順位はサーバーの rank を使う（無ければ並び順）
+  const entries = ranking.map((entry, index) => ({
+    ...entry,
+    rank: entry.rank || index + 1,
+  }));
+  const topCount = Math.max(1, Math.min(Number(revealCount) || 1, entries.length));
+  const top = entries.slice(0, topCount);
+  const rest = entries.slice(topCount);
 
-    // ニックネームは参加者の入力なので textContent で入れる
-    const name = document.createElement("span");
-    name.className = "rank-name";
-    name.textContent = entry.nickname || "匿名";
+  // 上位の枠：縦1列。5人までは全員が画面に収まる大きさ、
+  // 6人以上は約5人分が見える大きさにして、発表に合わせて上へスクロールしていく
+  const usableVh = 70; // 見出し・余白を除いた高さ
+  const visibleRows = Math.min(top.length, 5.5);
+  const topRowH = Math.min(10.5, usableVh / (visibleRows * 1.2 + 0.3));
+  rankingList.style.setProperty("--top-row-h", `${topRowH}vh`);
+  top.forEach((entry) => rankingList.appendChild(createTopRankRow(entry, entry.rank)));
 
-    const score = document.createElement("span");
-    score.className = "rank-score";
-    score.innerHTML = `${Number(entry.score) || 0}<small>問正解</small>`;
-    if (typeof entry.totalAnswerTime === "number") {
-      const time = document.createElement("span");
-      time.className = "rank-time";
-      time.textContent = `${Math.round(entry.totalAnswerTime * 10) / 10}秒`;
-      score.appendChild(time);
-    }
+  // 発表順：下の順位から（例：5位 → 4位 → … → 1位）
+  rankingRevealQueue = Array.from(rankingList.children).reverse();
 
-    li.append(badge, name, score);
-    rankingList.appendChild(li);
-  });
+  if (rest.length) {
+    rankingList.hidden = true;
+    rollLowerRanks(rest);
+  } else {
+    showTopRanks();
+  }
   console.log("ランキングデータ:", ranking);
 }
 
@@ -1072,6 +1259,13 @@ function renderOptions(options) {
       if (text) {
         text.textContent = opt.text || "";
         card.classList.add("has-text");
+        // 長い選択肢は文字を小さくする（全角＝1、半角＝0.6 で数える）
+        const len = Array.from(opt.text || "").reduce(
+          (sum, ch) => sum + (ch.charCodeAt(0) > 0xff ? 1 : 0.6),
+          0
+        );
+        text.classList.toggle("is-long", len > 10 && len <= 18);
+        text.classList.toggle("is-very-long", len > 18);
       }
     }
   });

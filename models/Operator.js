@@ -8,6 +8,7 @@ const operatorSchema = new mongoose.Schema({
   titleImageUrl: { type: String }, // タイトル画面の左下に表示する画像のURL
   titleImageRightUrl: { type: String }, // タイトル画面の右下に表示する画像のURL
   titleNames: { type: String }, // タイトルロゴの「新郎新婦の」の代わりに表示する名前
+  rankingRevealCount: { type: Number, default: 5 }, // 最終ランキングでEnterで1人ずつ発表する上位の人数
   createdAt: { type: Date, default: Date.now },
   isActive: { type: Boolean, default: true },
 });

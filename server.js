@@ -289,6 +289,29 @@ app.put("/api/operator/title-names", requireOperator, async (req, res) => {
   }
 });
 
+// 最終ランキングで1人ずつ発表する人数を保存
+app.put("/api/operator/ranking-reveal-count", requireOperator, async (req, res) => {
+  try {
+    const count = Number(req.body?.rankingRevealCount);
+    if (!Number.isInteger(count) || count < 1 || count > RANKING_REVEAL_MAX) {
+      return res
+        .status(400)
+        .json({ message: `1〜${RANKING_REVEAL_MAX}の整数で入力してください` });
+    }
+    const operator = await Operator.findOne({ roomId: req.roomId });
+    if (!operator) {
+      return res.status(404).json({ message: "運用者が見つかりません" });
+    }
+    operator.rankingRevealCount = count;
+    await operator.save();
+    console.log(`[${req.roomId}] ランキングの発表人数を保存しました: ${count}`);
+    res.json({ rankingRevealCount: count });
+  } catch (err) {
+    console.error("発表人数の保存エラー:", err);
+    res.status(500).json({ message: "発表人数の保存に失敗しました" });
+  }
+});
+
 // 参加者画面用：ルームのタイトルロゴの名前を取得（ログイン不要）
 app.get("/api/rooms/:roomId/title-names", async (req, res) => {
   try {
@@ -537,6 +560,9 @@ app.get("/api/auth/operator/status", async (req, res) => {
       titleImageUrl: operator?.titleImageUrl || null,
       titleImageRightUrl: operator?.titleImageRightUrl || null,
       titleNames: operator?.titleNames || "",
+      rankingRevealCount: Number.isInteger(operator?.rankingRevealCount)
+        ? operator.rankingRevealCount
+        : RANKING_REVEAL_DEFAULT,
     });
   } else {
     res.json({ isLoggedIn: false });
@@ -1015,11 +1041,10 @@ async function getFinalRanking(roomId) {
       return a.totalAnswerTime - b.totalAnswerTime; // 回答時間昇順（短い方が上位）
     });
     
-    // 上位5名を取得
-    const topUsers = usersWithTotalTime.slice(0, 5);
-    
-    // ニックネーム、スコア、合計回答時間を返す
-    return topUsers.map((item) => ({
+    // 全員分の順位・ニックネーム・スコア・合計回答時間を返す
+    // （下位はまとめて、上位は1人ずつ発表するので全員分が必要）
+    return usersWithTotalTime.map((item, index) => ({
+      rank: index + 1,
       nickname: item.user.nickname,
       score: item.user.score,
       totalAnswerTime: item.totalAnswerTime,
@@ -1027,6 +1052,20 @@ async function getFinalRanking(roomId) {
   } catch (error) {
     console.error(`[${roomId}] 最終ランキングの取得エラー:`, error);
     return [];
+  }
+}
+
+// 最終ランキングで1人ずつ発表する上位の人数（運用者ごとの設定。既定は5人）
+const RANKING_REVEAL_DEFAULT = 5;
+const RANKING_REVEAL_MAX = 30;
+async function getRankingRevealCount(roomId) {
+  try {
+    const operator = await Operator.findOne({ roomId });
+    const count = operator?.rankingRevealCount;
+    return Number.isInteger(count) ? count : RANKING_REVEAL_DEFAULT;
+  } catch (error) {
+    console.error(`[${roomId}] 発表人数の取得エラー:`, error);
+    return RANKING_REVEAL_DEFAULT;
   }
 }
 
@@ -1446,6 +1485,7 @@ io.on("connection", async (socket) => {
             await updateScoresForCurrentQuestion(roomId);
 
             const finalRankingData = await getFinalRanking(roomId);
+            const rankingRevealCount = await getRankingRevealCount(roomId);
 
             // ルーム内のソケットに終了メッセージを送信
             const roomForEnd = io.sockets.adapter.rooms.get(roomId);
@@ -1464,6 +1504,7 @@ io.on("connection", async (socket) => {
                   s.emit("quizEnded", {
                     message: "全問終了しました。",
                     finalRanking: finalRankingData,
+                    rankingRevealCount,
                   });
                 } else {
                   s.emit("quizEnded", { message: "クイズが終了しました。" });
@@ -1508,6 +1549,7 @@ io.on("connection", async (socket) => {
           roomState.resetGameState();
 
           const finalRankingData = await getFinalRanking(roomId);
+          const rankingRevealCount = await getRankingRevealCount(roomId);
 
           console.log(`[${roomId}] 主催者によってクイズが終了されました。`);
 
@@ -1524,7 +1566,6 @@ io.on("connection", async (socket) => {
                 s.emit("quizEnded", {
                   message: "クイズが終了しました！",
                   finalScore: participantUser ? participantUser.score : 0,
-                  finalRanking: finalRankingData,
                 });
                 console.log(
                       `[${roomId}] [endQuiz] 参加者 ${s.id} に最終スコア (${
@@ -1535,6 +1576,7 @@ io.on("connection", async (socket) => {
                 s.emit("quizEnded", {
                   message: "クイズが終了しました。",
                   finalRanking: finalRankingData,
+                  rankingRevealCount,
                 });
               } else {
                 s.emit("quizEnded", { message: "クイズが終了しました。" });

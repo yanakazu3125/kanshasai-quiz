@@ -236,7 +236,16 @@ body::before {
   line-height: 1.5;
   -webkit-text-stroke: 4px var(--kz-ink);
   paint-order: stroke fill;
-  word-break: break-word;
+  overflow-wrap: anywhere; /* 長い英字などがはみ出さないように */
+}
+
+/* 長い文の折り返し：文節（「の」「を」などの区切り）で折り、行の長さをそろえる
+   （auto-phrase は Chrome 系。iPhone の Safari などでは通常の折り返し） */
+#question-text,
+.option-button {
+  word-break: auto-phrase;
+  text-wrap: pretty;
+  line-break: strict;
 }
 
 /* 問題文が出るまでの待ち表示（控えめに点滅） */
@@ -297,7 +306,7 @@ body::before {
   text-align: left;
   -webkit-text-stroke: 3px var(--kz-ink);
   paint-order: stroke fill;
-  word-break: break-word;
+  overflow-wrap: anywhere; /* 長い英字などがはみ出さないように */
   cursor: pointer;
   transition: transform 0.08s, filter 0.2s;
 }

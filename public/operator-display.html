@@ -147,8 +147,12 @@
 
         <div id="ranking-area">
           <h2>最終ランキング</h2>
+          <!-- 上位：Enterで下の順位から1人ずつ発表 -->
           <ul id="ranking-list"></ul>
+          <!-- 下位：ランキング画面が出た時に、最下位から順に下から上へ流す -->
+          <div id="ranking-roll" hidden><ul id="ranking-roll-list"></ul></div>
         </div>
+        <p id="ranking-hint" hidden>Enterで次の順位を発表</p>
 
         <button id="return-to-start-btn" style="display: none">
           開始画面に戻る

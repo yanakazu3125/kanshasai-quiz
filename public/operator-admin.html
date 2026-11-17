@@ -276,6 +276,21 @@
         </div>
       </div>
 
+      <div id="ranking-reveal-settings" style="margin-top: 20px; padding: 15px; background-color: #4a4f5d; border-radius: 8px; text-align: left;">
+        <h2>最終ランキングの発表</h2>
+        <p style="font-size: 0.9em; color: #bbb;">
+          上位の何人を1人ずつ発表するかを決めます。それより下の順位は、ランキング画面が出た時に最下位から順に下から上へ流して見せ、その後は上位だけが残ります。上位はEnterを押すごとに下の順位から1人ずつ発表します（例：5人なら 最下位〜6位が流れる → 5位 → 4位 → … → 1位）。
+        </p>
+        <div style="margin-top: 10px;">
+          <label for="rankingRevealCountInput">1人ずつ発表する人数:</label>
+          <input id="rankingRevealCountInput" type="number" min="1" max="30" step="1" value="5" style="width: 80px; margin: 0 6px; padding: 4px 6px;" />人
+          <button id="saveRankingRevealCountBtn" style="margin-left: 10px; padding: 5px 15px; background-color: #61dafb; color: #282c34; border: none; border-radius: 5px; cursor: pointer;">
+            保存
+          </button>
+          <p id="ranking-reveal-status" style="margin-top: 10px; font-size: 0.9em; color: #bbb;">1〜30人で設定できます。流れている途中でEnterを押すと、上位の発表まで飛ばせます。</p>
+        </div>
+      </div>
+
       <div id="title-image-settings" style="margin-top: 20px; padding: 15px; background-color: #4a4f5d; border-radius: 8px; text-align: left;">
         <h2>タイトル画面の左右の画像（新郎新婦など）</h2>
         <p style="font-size: 0.9em; color: #bbb;">

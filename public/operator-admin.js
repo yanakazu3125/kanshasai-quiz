@@ -835,6 +835,12 @@ async function loadTitleImageInfo() {
     });
     updateTitleMiniPreview();
 
+    // 最終ランキングで1人ずつ発表する人数（初回だけ入力欄に入れる）
+    if (rankingRevealCountInput && !rankingRevealCountLoaded) {
+      rankingRevealCountLoaded = true;
+      rankingRevealCountInput.value = statusData.rankingRevealCount ?? 5;
+    }
+
     // タイトルロゴの名前（初回だけ入力欄に入れる。入力中の内容は上書きしない）
     if (titleNamesInput && !titleNamesLoaded) {
       titleNamesLoaded = true;
@@ -890,6 +896,40 @@ if (saveTitleNamesBtn) {
       console.error("タイトルロゴの名前の保存エラー:", error);
       titleNamesStatusElement.textContent = "保存中にエラーが発生しました";
       titleNamesStatusElement.style.color = "#e74c3c";
+    }
+  });
+}
+
+// 最終ランキングで1人ずつ発表する人数
+const rankingRevealCountInput = document.getElementById("rankingRevealCountInput");
+const saveRankingRevealCountBtn = document.getElementById("saveRankingRevealCountBtn");
+const rankingRevealStatusElement = document.getElementById("ranking-reveal-status");
+let rankingRevealCountLoaded = false; // 保存済みの人数を入力欄に読み込んだか
+
+if (saveRankingRevealCountBtn) {
+  saveRankingRevealCountBtn.addEventListener("click", async () => {
+    rankingRevealStatusElement.textContent = "保存中...";
+    rankingRevealStatusElement.style.color = "#61dafb";
+    try {
+      const res = await fetch("/api/operator/ranking-reveal-count", {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rankingRevealCount: Number(rankingRevealCountInput.value) }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        rankingRevealStatusElement.textContent = data.message || `保存に失敗しました: ${res.status}`;
+        rankingRevealStatusElement.style.color = "#e74c3c";
+        return;
+      }
+      rankingRevealCountInput.value = data.rankingRevealCount;
+      rankingRevealStatusElement.textContent = `保存しました！上位${data.rankingRevealCount}人をEnterで1人ずつ発表します`;
+      rankingRevealStatusElement.style.color = "#1f8f4a";
+    } catch (error) {
+      console.error("発表人数の保存エラー:", error);
+      rankingRevealStatusElement.textContent = "保存中にエラーが発生しました";
+      rankingRevealStatusElement.style.color = "#e74c3c";
     }
   });
 }
