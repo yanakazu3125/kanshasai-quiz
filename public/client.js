@@ -21,6 +21,42 @@ let myScore = 0;
 let myNickname = '匿名参加者';
 let socket = null;
 
+let currentQuestion = null; // 受信済みの問題（表示画面に合わせて少しずつ見せる）
+
+// 問題文を表示する（animate: 登場アニメを付けるか）
+function showQuestionText(animate) {
+    if (!currentQuestion) return;
+    const alreadyShown = !questionTextElement.classList.contains('is-waiting') &&
+        questionTextElement.textContent === currentQuestion.text;
+    questionTextElement.classList.remove('is-waiting');
+    questionTextElement.textContent = currentQuestion.text;
+    if (animate && !alreadyShown) {
+        questionTextElement.classList.remove('pop-in');
+        void questionTextElement.offsetWidth; // アニメを再生し直す
+        questionTextElement.classList.add('pop-in');
+    }
+}
+
+// 選択肢ボタンを表示して回答できるようにする（animate: A→Dの順に登場）
+function showOptions(animate) {
+    if (!currentQuestion || optionsElement.children.length) return;
+    currentQuestion.options.forEach((option, index) => {
+        const button = document.createElement('button');
+        button.classList.add('option-button');
+        if (animate) {
+            button.classList.add('pop-in');
+            button.style.animationDelay = `${index * 0.08}s`;
+        }
+        button.dataset.option = option.id;
+        button.textContent = option.text;
+        button.onclick = () => sendAnswer(option.id);
+        optionsElement.appendChild(button);
+    });
+    const countdownContainer = document.getElementById('countdown-container');
+    if (countdownContainer) countdownContainer.style.display = 'block';
+    setFeedback('回答してください');
+}
+
 // メッセージ表示（色は participant.css のクラスで指定）
 // kind: "" | "sent" | "warn" | "timeup" | "final"
 function setFeedback(text, kind = "") {
@@ -55,8 +91,21 @@ if (!urlParams.get('roomId')) {
     connectToRoom();
 }
 
+// ロゴの「新郎新婦の」を、このルームで設定された名前に置き換える
+async function loadLogoNames() {
+    try {
+        const res = await fetch(`/api/rooms/${encodeURIComponent(currentRoomId)}/title-names`);
+        if (!res.ok) return;
+        const data = await res.json();
+        applyLogoNames(document.getElementById('participant-logo'), data.titleNames);
+    } catch (error) {
+        console.warn('ロゴの名前の取得に失敗:', error);
+    }
+}
+
 // Socket.IO接続（ルームIDを指定）
 function connectToRoom() {
+    loadLogoNames();
     socket = io({
         query: { roomId: currentRoomId },
         auth: { roomId: currentRoomId },
@@ -135,40 +184,51 @@ function setupSocketHandlers() {
     });
 
     // サーバーから問題データが送られてきた時
+    // 問題文・選択肢は、会場の表示画面で出したタイミングに合わせて表示する
+    // （questionTextRevealed / optionsRevealed イベント）
     socket.on('question', (questionData) => {
         console.log('参加者画面: 問題データを受信しました:', questionData);
 
-        currentQuestionId = questionData.id;
-        questionTextElement.textContent = questionData.text;
-        
-        // カウントダウンコンテナを表示（問題が表示されたとき）
+        currentQuestionId = String(questionData.id);
+        currentQuestion = questionData;
+        const reveal = questionData.reveal || { text: false, options: false };
+
+        // カウントダウンと選択肢は、選択肢が出るまで隠しておく
         const countdownContainer = document.getElementById('countdown-container');
-        if (countdownContainer) {
-            countdownContainer.style.display = 'block';
-        }
+        if (countdownContainer) countdownContainer.style.display = 'none';
+        optionsElement.innerHTML = '';
 
-        if (optionsElement) {
-            optionsElement.innerHTML = '';
-            questionData.options.forEach(option => {
-                const button = document.createElement('button');
-                button.classList.add('option-button');
-                button.dataset.option = option.id;
-                button.textContent = option.text;
-                button.onclick = () => sendAnswer(option.id);
-                optionsElement.appendChild(button);
-            });
-            Array.from(optionsElement.children).forEach(button => button.disabled = false);
+        if (reveal.options) {
+            showQuestionText(false);
+            showOptions(false);
+        } else if (reveal.text) {
+            showQuestionText(false);
+            setFeedback('選択肢が出るまでお待ちください');
         } else {
-            console.error("エラー: optionsElement が見つかりません。index.htmlに <div id='options'> が存在するか確認してください。");
+            questionTextElement.textContent = '問題が出るまでお待ちください';
+            questionTextElement.classList.add('is-waiting');
+            setFeedback('スクリーンに注目！');
         }
 
-        setFeedback('回答してください');
-        
         if (questionData.newScore !== undefined) {
             myScore = questionData.newScore;
             myScoreElement.textContent = `あなたの正解数: ${myScore}`;
             console.log(`参加者画面: スコアが更新されました: ${myScore}`);
         }
+    });
+
+    // 表示画面で問題文が出た
+    socket.on('questionTextRevealed', (data) => {
+        if (!currentQuestion || String(data.questionId) !== currentQuestionId) return;
+        showQuestionText(true);
+        setFeedback('選択肢が出るまでお待ちください');
+    });
+
+    // 表示画面で選択肢が出た（同時にカウントダウン開始）
+    socket.on('optionsRevealed', (data) => {
+        if (!currentQuestion || String(data.questionId) !== currentQuestionId) return;
+        showQuestionText(false);
+        showOptions(true);
     });
 
     // クイズが開始されたことを通知

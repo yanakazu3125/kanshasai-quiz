@@ -1,0 +1,132 @@
+/* =====================================================================
+   タイトルロゴ（画像を使わず文字とCSSで描く）
+   1段目：管理画面で入力した名前＋「の」（未入力なら「新郎新婦の」）
+   2段目：ラブがスゴいクイズ　3段目：GP
+   表示画面・参加者画面・管理画面のプレビューで共通。
+   大きさはすべてロゴの幅（cqw）基準なので、どの画面でも同じ見た目で拡大縮小する。
+   ===================================================================== */
+.logo-wrap {
+  position: relative;
+  display: block;
+  container-type: inline-size;
+}
+
+.kz-logo {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4cqw 0 3cqw;
+  font-family: "Dela Gothic One", "Hiragino Kaku Gothic StdN", "Meiryo",
+    sans-serif;
+  font-weight: 400;
+  line-height: 1;
+  white-space: nowrap;
+  user-select: none;
+}
+
+/* 背景：金色の後光 */
+.kz-logo::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  width: 92cqw;
+  height: 70cqw;
+  transform: translate(-50%, -50%);
+  z-index: 0;
+  pointer-events: none;
+  border-radius: 50%;
+  background: radial-gradient(
+      ellipse at center,
+      rgba(255, 236, 150, 0.95) 0%,
+      rgba(255, 196, 40, 0.55) 28%,
+      rgba(255, 170, 0, 0) 62%
+    ),
+    repeating-conic-gradient(
+      from 0deg,
+      rgba(255, 214, 90, 0.55) 0deg 6deg,
+      rgba(255, 214, 90, 0) 6deg 15deg
+    );
+  -webkit-mask-image: radial-gradient(ellipse at center, #000 30%, transparent 70%);
+  mask-image: radial-gradient(ellipse at center, #000 30%, transparent 70%);
+}
+
+.kz-logo > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ---- 立体文字の共通部品 ----
+   本体：白フチ＋金の厚み＋濃い影／前面（::after）：--kz-fill のグラデーション文字 */
+.kz-t {
+  position: relative;
+  display: inline-block;
+  color: #fff;
+  -webkit-text-stroke: 0.2em var(--kz-edge, #fff);
+  paint-order: stroke fill;
+  text-shadow: 0.02em 0.02em 0 #c99a2e, 0.04em 0.04em 0 #b8862a,
+    0.06em 0.06em 0 #a07020, 0.08em 0.08em 0 #8a5c18, 0.1em 0.1em 0 #6e4610,
+    0.12em 0.14em 0.08em rgba(0, 0, 0, 0.55);
+}
+.kz-t::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  -webkit-text-stroke: 0;
+  text-shadow: none;
+  color: transparent;
+  background-image: var(--kz-fill);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ---- 1段目：名前＋の（紫） ---- */
+.kz-logo-names {
+  /* 幅は中身に合わせる（max-width で縮めると色の層からはみ出した文字が白く見える） */
+  font-size: min(17cqw, calc(90cqw / var(--len, 5)));
+  letter-spacing: 0.04em;
+  margin-bottom: 3cqw;
+  --kz-fill: linear-gradient(180deg, #b47cf0 0%, #7a3cc8 55%, #4f1d8f 100%);
+}
+
+/* ---- 2段目：ラブがスゴいクイズ（斜めに傾けた極太の立体文字） ---- */
+.kz-logo-main {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.6cqw;
+  transform: skewX(-10deg);
+  font-size: 11.5cqw;
+  letter-spacing: -0.02em;
+}
+.kz-love {
+  --kz-fill: linear-gradient(180deg, #ff7ac0 0%, #e8187a 50%, #b0003c 100%);
+}
+.kz-ga {
+  font-size: 0.42em;
+  margin: 0 0.05em 0.2em;
+  --kz-fill: linear-gradient(180deg, #ff7ac0 0%, #b0003c 100%);
+}
+.kz-sugoi {
+  --kz-fill: linear-gradient(180deg, #a6e6ff 0%, #3ab0e0 50%, #146a96 100%);
+}
+.kz-quiz {
+  --kz-fill: linear-gradient(180deg, #d4f56a 0%, #6cc23a 50%, #1f7a2e 100%);
+}
+
+/* ---- 3段目：GP（金） ---- */
+.kz-logo-gp {
+  margin-top: 1.6cqw;
+  font-size: 12cqw;
+  letter-spacing: 0.02em;
+  --kz-edge: #5a3600;
+  --kz-fill: linear-gradient(
+    180deg,
+    #fff8c8 0%,
+    #ffe066 30%,
+    #e0a000 55%,
+    #fff0a0 70%,
+    #b07800 100%
+  );
+}

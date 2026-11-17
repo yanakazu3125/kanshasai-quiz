@@ -222,7 +222,12 @@ app.post(
   }
 );
 
-// タイトル画面（左下）の画像アップロードエンドポイント
+// タイトル画面の左右の画像：?side=right なら右下、それ以外は左下
+function titleImageField(req) {
+  return req.query.side === "right" ? "titleImageRightUrl" : "titleImageUrl";
+}
+
+// タイトル画面（左下・右下）の画像アップロードエンドポイント
 app.post(
   "/api/upload-title-image",
   requireOperator, // 運用者認証が必要
@@ -242,10 +247,10 @@ app.post(
       const result = await uploadBufferToCloudinary(req.file.buffer, roomId, "image");
       console.log(`[${roomId}] タイトル画像アップロード成功: ${result.secure_url}`);
 
-      // OperatorのtitleImageUrlを更新
+      // Operatorの titleImageUrl（左）/ titleImageRightUrl（右）を更新
       const operator = await Operator.findOne({ roomId });
       if (operator) {
-        operator.titleImageUrl = result.secure_url;
+        operator[titleImageField(req)] = result.secure_url;
         await operator.save();
         console.log(`[${roomId}] タイトル画像URLを保存しました`);
       }
@@ -258,14 +263,51 @@ app.post(
   }
 );
 
-// タイトル画面（左下）の画像削除エンドポイント
+// タイトルロゴの名前（「新郎新婦の」の代わり）を保存
+const TITLE_NAMES_MAX_LENGTH = 30;
+app.put("/api/operator/title-names", requireOperator, async (req, res) => {
+  try {
+    const roomId = req.roomId;
+    const titleNames = String(req.body?.titleNames ?? "").trim();
+    if (titleNames.length > TITLE_NAMES_MAX_LENGTH) {
+      return res
+        .status(400)
+        .json({ message: `名前は${TITLE_NAMES_MAX_LENGTH}文字以内で入力してください` });
+    }
+
+    const operator = await Operator.findOne({ roomId });
+    if (!operator) {
+      return res.status(404).json({ message: "運用者が見つかりません" });
+    }
+    operator.titleNames = titleNames;
+    await operator.save();
+    console.log(`[${roomId}] タイトルロゴの名前を保存しました: ${titleNames}`);
+    res.json({ titleNames });
+  } catch (err) {
+    console.error("タイトルロゴの名前の保存エラー:", err);
+    res.status(500).json({ message: "名前の保存に失敗しました" });
+  }
+});
+
+// 参加者画面用：ルームのタイトルロゴの名前を取得（ログイン不要）
+app.get("/api/rooms/:roomId/title-names", async (req, res) => {
+  try {
+    const operator = await Operator.findOne({ roomId: String(req.params.roomId) });
+    res.json({ titleNames: operator?.titleNames || "" });
+  } catch (err) {
+    console.error("タイトルロゴの名前の取得エラー:", err);
+    res.status(500).json({ titleNames: "" });
+  }
+});
+
+// タイトル画面（左下・右下）の画像削除エンドポイント
 app.delete("/api/operator/title-image", requireOperator, async (req, res) => {
   try {
     const roomId = req.roomId;
     const operator = await Operator.findOne({ roomId });
 
     if (operator) {
-      operator.titleImageUrl = null;
+      operator[titleImageField(req)] = null;
       await operator.save();
       console.log(`[${roomId}] タイトル画像を削除しました`);
       res.json({ message: "タイトル画像を削除しました" });
@@ -299,6 +341,8 @@ class RoomState {
 };
     this.isShowingResults = false;
     this.answersOpen = false; // 回答受付中か（タイマー手動開始まで false）
+    this.questionTextRevealed = false; // 表示画面で問題文を出したか（参加者のスマホも連動）
+    this.optionsRevealed = false; // 表示画面で選択肢を出したか（＝タイマー開始。スマホも連動）
     this.socketAnsweredFlags = new Map(); // Map<socket.id, boolean>
   }
 
@@ -321,6 +365,8 @@ class RoomState {
   };
     this.isShowingResults = false;
     this.answersOpen = false;
+    this.questionTextRevealed = false;
+    this.optionsRevealed = false;
     this.socketAnsweredFlags.clear();
     console.log(`[${this.roomId}] ゲームの状態がリセットされました。`);
   }
@@ -489,6 +535,8 @@ app.get("/api/auth/operator/status", async (req, res) => {
       roomId: req.session.roomId,
       username: req.session.username,
       titleImageUrl: operator?.titleImageUrl || null,
+      titleImageRightUrl: operator?.titleImageRightUrl || null,
+      titleNames: operator?.titleNames || "",
     });
   } else {
     res.json({ isLoggedIn: false });
@@ -1268,6 +1316,8 @@ io.on("connection", async (socket) => {
           roomState.currentRemainingTime = roomState.QUESTION_DURATION;
           roomState.isShowingResults = false;
           roomState.answersOpen = false; // タイマー開始まで回答を受け付けない
+          roomState.questionTextRevealed = false;
+          roomState.optionsRevealed = false;
           broadcastQuizStatus(roomId);
         } else if (commandData.type === "resyncQuestion") {
           // 表示画面の再読み込み後などに、進行中の問題をこのコントローラーへ送り直す
@@ -1277,6 +1327,7 @@ io.on("connection", async (socket) => {
             text: roomState.currentQuestionData.text,
             options: roomState.currentQuestionData.options,
             resume: {
+              textRevealed: roomState.questionTextRevealed,
               timerStarted:
                 roomState.answersOpen ||
                 roomState.isShowingResults ||
@@ -1291,10 +1342,25 @@ io.on("connection", async (socket) => {
               correctOptionId: roomState.currentQuestionResults.correctOptionId,
             });
           }
+        } else if (commandData.type === "revealQuestionText") {
+          // 表示画面で問題文を出した → 参加者のスマホにも問題文を出す
+          if (!roomState.isQuizActive || !roomState.currentQuestionData) return;
+          roomState.questionTextRevealed = true;
+          io.to(roomId).emit("questionTextRevealed", {
+            questionId: roomState.currentQuestionData._id.toString(),
+          });
         } else if (commandData.type === "startTimer") {
-          // 選択肢を出し切った後、コントローラーが手動でタイマーを開始する
+          // 表示画面で選択肢を出すのと同時に、コントローラーがタイマーを開始する
           if (!roomState.isQuizActive) return;
           console.log(`[${roomId}] コントローラーがタイマーを開始しました。`);
+          roomState.questionTextRevealed = true;
+          roomState.optionsRevealed = true;
+          if (roomState.currentQuestionData) {
+            // 参加者のスマホにも選択肢を出す（カウントダウンより先に送る）
+            io.to(roomId).emit("optionsRevealed", {
+              questionId: roomState.currentQuestionData._id.toString(),
+            });
+          }
           startQuestionTimer(roomId);
         } else if (commandData.type === "nextQuestion") {
           if (!roomState.isQuizActive) return;
@@ -1373,6 +1439,8 @@ io.on("connection", async (socket) => {
             roomState.currentRemainingTime = roomState.QUESTION_DURATION;
             roomState.isShowingResults = false;
             roomState.answersOpen = false; // タイマー開始まで回答を受け付けない
+            roomState.questionTextRevealed = false;
+            roomState.optionsRevealed = false;
             broadcastQuizStatus(roomId);
           } else {
             await updateScoresForCurrentQuestion(roomId);
@@ -1598,13 +1666,19 @@ io.on("connection", async (socket) => {
     !socket.isController
   ) {
     const currentUser = await User.findOne({ _id: socket.userId, roomId: roomId });
+    const optionsShown =
+      roomState.optionsRevealed || roomState.answersOpen || roomState.isShowingResults;
     socket.emit("question", {
       id: roomState.currentQuestionData._id.toString(),
       text: roomState.currentQuestionData.text,
       options: roomState.currentQuestionData.options,
       newScore: currentUser ? currentUser.score : 0,
+      reveal: {
+        text: roomState.questionTextRevealed || optionsShown,
+        options: optionsShown,
+      },
     });
-    socket.emit("countdown", roomState.currentRemainingTime);
+    if (optionsShown) socket.emit("countdown", roomState.currentRemainingTime);
     if (roomState.isShowingResults) {
       socket.emit("showQuestionResults", {
         questionId: roomState.currentQuestionResults.questionId,

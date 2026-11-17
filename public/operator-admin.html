@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>運用者管理画面</title>
     <link rel="stylesheet" href="style.css" />
+    <!-- タイトルロゴの名前の帯（表示画面と共通） -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="logo-names.css" />
     <style>
       /* 管理画面用の追加CSS */
 
@@ -36,7 +42,8 @@
         height: 100%;
         object-fit: cover;
       }
-      .title-mini-screen img {
+      .title-mini-screen > img,
+      .title-mini-logo {
         position: absolute;
         height: auto;
       }
@@ -46,11 +53,6 @@
         width: 64%;
         transform: translate(-50%, -55%);
       }
-      .title-mini-super {
-        right: 4%;
-        bottom: 2%;
-        width: 26%;
-      }
       .title-mini-custom {
         left: 10%;
         bottom: 2%;
@@ -59,8 +61,23 @@
         width: auto;
         object-fit: contain;
       }
+      .title-mini-custom.is-right {
+        left: auto;
+        right: 10%;
+      }
       .title-mini-custom[hidden] {
         display: none;
+      }
+      .title-image-slots {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        flex: 1 1 280px;
+      }
+      .title-image-slot {
+        padding: 10px 12px;
+        border-radius: 6px;
+        background: rgba(0, 0, 0, 0.15);
       }
       .title-mini figcaption {
         margin-top: 6px;
@@ -244,34 +261,77 @@
         <p id="timer-status" style="margin-top: 10px; font-size: 0.9em; color: #bbb;"></p>
       </div>
 
+      <div id="title-names-settings" style="margin-top: 20px; padding: 15px; background-color: #4a4f5d; border-radius: 8px; text-align: left;">
+        <h2>タイトルロゴの名前</h2>
+        <p style="font-size: 0.9em; color: #bbb;">
+          ロゴの「新郎新婦の」の部分を、入力した名前に置き換えます（後ろに「の」が付きます）。空欄で保存すると元のロゴに戻ります。
+        </p>
+        <div style="margin-top: 10px;">
+          <label for="titleNamesInput">名前:</label>
+          <input id="titleNamesInput" type="text" maxlength="30" placeholder="例：たかし＆はなこ" style="display: block; width: 100%; max-width: 360px; margin: 5px 0 10px; padding: 6px 8px; box-sizing: border-box;" />
+          <button id="saveTitleNamesBtn" style="padding: 5px 15px; background-color: #61dafb; color: #282c34; border: none; border-radius: 5px; cursor: pointer;">
+            名前を保存
+          </button>
+          <p id="title-names-status" style="margin-top: 10px; font-size: 0.9em; color: #bbb;">入力中の名前は、下の「タイトル画面の左右の画像」のプレビューで確認できます。</p>
+        </div>
+      </div>
+
       <div id="title-image-settings" style="margin-top: 20px; padding: 15px; background-color: #4a4f5d; border-radius: 8px; text-align: left;">
-        <h2>タイトル画面の画像（左下）</h2>
-        <p style="font-size: 0.9em; color: #bbb;">タイトル画面の左下に表示します。背景が透明なPNGがおすすめです。</p>
+        <h2>タイトル画面の左右の画像（新郎新婦など）</h2>
+        <p style="font-size: 0.9em; color: #bbb;">
+          タイトル画面の左下・右下に表示します。背景が透明なPNGがおすすめです。白やグレー・青など単色の背景の写真は「背景を透明にする」で抜けます（部屋や屋外など色々写っている背景は抜けません）。
+        </p>
         <div class="title-image-layout">
-          <div style="margin-top: 10px;">
-            <label for="titleImageFile">画像ファイル:</label>
-            <input id="titleImageFile" type="file" accept="image/*" style="margin-top: 5px; margin-bottom: 10px; display: block;" />
-            <div style="margin-bottom: 12px;">
-              <label style="cursor: pointer;">
-                <input id="titleImageRemoveWhite" type="checkbox" />
-                白い背景を透明にする
-              </label>
-              <div style="margin-top: 6px; font-size: 0.9em;">
-                <label for="titleImageWhiteTolerance">抜く強さ:</label>
-                <input id="titleImageWhiteTolerance" type="range" min="5" max="120" value="40" disabled style="vertical-align: middle;" />
+          <div class="title-image-slots">
+            <div class="title-image-slot" data-side="left">
+              <h3 style="margin: 0 0 6px; font-size: 1.05em;">左下の画像</h3>
+              <p style="margin: 0 0 8px; font-size: 0.85em; color: #bbb;">未設定なら何も表示しません。</p>
+              <input class="title-image-file" type="file" accept="image/*" style="margin-bottom: 10px; display: block;" />
+              <div style="margin-bottom: 12px;">
+                <label style="cursor: pointer;">
+                  <input class="title-image-remove-white" type="checkbox" />
+                  背景を透明にする（白・単色）
+                </label>
+                <div style="margin-top: 6px; font-size: 0.9em;">
+                  <label>抜く強さ:
+                    <input class="title-image-tolerance" type="range" min="5" max="120" value="40" disabled style="vertical-align: middle;" />
+                  </label>
+                </div>
               </div>
-              <p style="margin: 4px 0 0; font-size: 0.8em; color: #bbb;">
-                画像の外側から続く白だけを抜きます（内側の白は残ります）。白っぽい背景が残る時は強さを上げてください。
-              </p>
-            </div>
-            <button id="uploadTitleImageBtn" style="padding: 5px 15px; background-color: #61dafb; color: #282c34; border: none; border-radius: 5px; cursor: pointer;">
-              画像をアップロード
-            </button>
-            <p id="title-image-status" style="margin-top: 10px; font-size: 0.9em; color: #bbb;"></p>
-            <div id="title-image-preview" style="margin-top: 10px; display: none;">
-              <button id="removeTitleImageBtn" style="padding: 5px 15px; background-color: #e74c3c; color: white; border: none; border-radius: 5px; cursor: pointer;">
-                画像を削除
+              <button class="title-image-upload" style="padding: 5px 15px; background-color: #61dafb; color: #282c34; border: none; border-radius: 5px; cursor: pointer;">
+                画像をアップロード
               </button>
+              <p class="title-image-status" style="margin-top: 10px; font-size: 0.9em; color: #bbb;"></p>
+              <div class="title-image-remove-area" style="margin-top: 10px; display: none;">
+                <button class="title-image-remove" style="padding: 5px 15px; background-color: #e74c3c; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                  画像を削除
+                </button>
+              </div>
+            </div>
+            <div class="title-image-slot" data-side="right">
+              <h3 style="margin: 0 0 6px; font-size: 1.05em;">右下の画像</h3>
+              <p style="margin: 0 0 8px; font-size: 0.85em; color: #bbb;">未設定なら何も表示しません。</p>
+              <input class="title-image-file" type="file" accept="image/*" style="margin-bottom: 10px; display: block;" />
+              <div style="margin-bottom: 12px;">
+                <label style="cursor: pointer;">
+                  <input class="title-image-remove-white" type="checkbox" />
+                  背景を透明にする（白・単色）
+                </label>
+                <div style="margin-top: 6px; font-size: 0.9em;">
+                  <label>抜く強さ:
+                    <input class="title-image-tolerance" type="range" min="5" max="120" value="40" disabled style="vertical-align: middle;" />
+                  </label>
+                </div>
+              </div>
+              <button class="title-image-upload" style="padding: 5px 15px; background-color: #61dafb; color: #282c34; border: none; border-radius: 5px; cursor: pointer;">
+                画像をアップロード
+              </button>
+              <p class="title-image-status" style="margin-top: 10px; font-size: 0.9em; color: #bbb;"></p>
+              <div class="title-image-remove-area" style="margin-top: 10px; display: none;">
+                <button class="title-image-remove" style="padding: 5px 15px; background-color: #e74c3c; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                  画像を削除
+                </button>
+              </div>
             </div>
           </div>
 
@@ -279,11 +339,11 @@
           <figure class="title-mini">
             <div class="title-mini-screen">
               <video src="/title/bg-blue.mp4" autoplay loop muted playsinline></video>
-              <img class="title-mini-logo" src="/title/logo.png" alt="" />
-              <img class="title-mini-super" src="/title/super.png" alt="" />
-              <img id="title-image-preview-img" class="title-mini-custom" alt="タイトル画面の画像" hidden />
+              <div id="title-mini-logo" class="title-mini-logo logo-wrap"></div>
+              <img class="title-mini-custom" data-side="left" alt="左下の画像" hidden />
+              <img class="title-mini-custom is-right" data-side="right" alt="右下の画像" hidden />
             </div>
-            <figcaption id="title-mini-caption">プレビュー（画像なし）</figcaption>
+            <figcaption id="title-mini-caption">プレビュー</figcaption>
           </figure>
         </div>
       </div>
@@ -383,6 +443,7 @@
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
+    <script src="logo-names.js"></script>
     <script src="operator-admin.js"></script>
   </body>
 </html>

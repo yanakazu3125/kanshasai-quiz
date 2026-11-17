@@ -788,34 +788,7 @@ body {
   }
 }
 
-/* 右下スーパーマン：飛んでくるような立体的な動き */
-.title-super {
-  position: absolute;
-  right: 4vw;
-  bottom: 2vh;
-  width: min(26vw, 380px);
-  height: auto;
-  transform-origin: center;
-  filter: drop-shadow(0 18px 30px rgba(0, 0, 0, 0.5));
-  animation: title-super-fly 5s ease-in-out infinite;
-}
-
-@keyframes title-super-fly {
-  0% {
-    transform: translate(0, 0) translateZ(0) rotateZ(-6deg) rotateY(10deg)
-      scale(1);
-  }
-  50% {
-    transform: translate(-28px, -40px) translateZ(120px) rotateZ(4deg)
-      rotateY(-8deg) scale(1.1);
-  }
-  100% {
-    transform: translate(0, 0) translateZ(0) rotateZ(-6deg) rotateY(10deg)
-      scale(1);
-  }
-}
-
-/* 左下の画像（管理画面で設定）：右下と左右対称にふわっと揺れる */
+/* 左下の画像（管理画面で設定）：右下の画像と左右対称にふわっと揺れる */
 .title-custom-image {
   position: absolute;
   left: 10vw;
@@ -832,6 +805,26 @@ body {
 }
 .title-custom-image[hidden] {
   display: none;
+}
+
+/* 右下の画像：左下と左右対称の位置・揺れ */
+.title-custom-image.is-right {
+  left: auto;
+  right: 10vw;
+  animation-name: title-custom-float-right;
+  animation-delay: 0s;
+}
+
+@keyframes title-custom-float-right {
+  0%,
+  100% {
+    transform: translate(0, 0) translateZ(0) rotateZ(-6deg) rotateY(10deg)
+      scale(1);
+  }
+  50% {
+    transform: translate(-28px, -40px) translateZ(120px) rotateZ(4deg)
+      rotateY(-8deg) scale(1.1);
+  }
 }
 
 @keyframes title-custom-float {
@@ -890,7 +883,6 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .title-logo,
-  .title-super,
   .title-start-btn {
     animation: none;
   }

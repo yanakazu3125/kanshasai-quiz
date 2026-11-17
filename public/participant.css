@@ -85,7 +85,7 @@ body::before {
 /* ---- ロゴ ---- */
 .logo {
   margin: 0;
-  width: min(58%, 260px);
+  width: min(80%, 340px);
 }
 .logo img {
   display: block;
@@ -239,6 +239,36 @@ body::before {
   word-break: break-word;
 }
 
+/* 問題文が出るまでの待ち表示（控えめに点滅） */
+#question-text.is-waiting {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.85);
+  animation: waiting-blink 1.4s ease-in-out infinite;
+}
+@keyframes waiting-blink {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+/* 表示画面に合わせて問題文・選択肢が出る時のポップイン */
+#question-text.pop-in {
+  animation: phone-pop 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.28) both;
+}
+.option-button.pop-in {
+  animation: phone-pop 0.45s cubic-bezier(0.18, 0.89, 0.32, 1.28) both;
+}
+@keyframes phone-pop {
+  0% {
+    transform: scale(0.7) translateY(16px);
+    opacity: 0;
+  }
+  100% {
+    transform: none;
+    opacity: 1;
+  }
+}
+
 /* ---- 選択肢：A〜Dの色チップ付きの押しボタン ---- */
 #options {
   display: flex;
@@ -386,7 +416,10 @@ body::before {
 @media (prefers-reduced-motion: reduce) {
   body::before,
   #countdown.is-hurry,
-  .option-button.selected {
+  .option-button.selected,
+  #question-text.is-waiting,
+  #question-text.pop-in,
+  .option-button.pop-in {
     animation: none;
   }
 }

@@ -33,11 +33,20 @@ let socket = null;
     }
 
     currentRoomId = statusData.roomId;
+    // タイトルロゴの「新郎新婦の」を、管理画面で入力した名前に置き換える
+    applyLogoNames(document.getElementById("title-logo"), statusData.titleNames);
+
     // タイトル画面の左下の画像（管理画面で設定されている時だけ表示）
     const titleCustomImage = document.getElementById("title-custom-image");
     if (titleCustomImage && statusData.titleImageUrl) {
       titleCustomImage.src = statusData.titleImageUrl;
       titleCustomImage.hidden = false;
+    }
+    // 右下の画像（管理画面で設定されている時だけ表示）
+    const titleCustomImageRight = document.getElementById("title-custom-image-right");
+    if (titleCustomImageRight && statusData.titleImageRightUrl) {
+      titleCustomImageRight.src = statusData.titleImageRightUrl;
+      titleCustomImageRight.hidden = false;
     }
     
     // 参加用URLを更新（roomIdを含める）
@@ -359,20 +368,25 @@ function stopRankingBgm() {
   rankingBgm.currentTime = 0;
 }
 
-// 未表示の問題文と選択肢A〜Dをまとめて表示する。表示できたら true
-function revealQuestion() {
-  const textPending =
-    questionTextElement &&
-    questionTextElement.classList.contains("text-pending");
+// 未表示の問題文を表示する。表示できたら true
+function revealQuestionText() {
+  if (
+    !questionTextElement ||
+    !questionTextElement.classList.contains("text-pending")
+  ) {
+    return false;
+  }
+  questionTextElement.classList.remove("text-pending");
+  questionTextElement.classList.add("text-revealed");
+  return true;
+}
+
+// 未表示の選択肢A〜Dを表示する（A→Dの順に少しずつずれて登場）。表示できたら true
+function revealOptions() {
   const pendingOptions = document.querySelectorAll(
     "#options .option.reveal-pending"
   );
-  if (!textPending && pendingOptions.length === 0) return false;
-
-  if (textPending) {
-    questionTextElement.classList.remove("text-pending");
-    questionTextElement.classList.add("text-revealed");
-  }
+  if (pendingOptions.length === 0) return false;
   pendingOptions.forEach((opt) => {
     opt.classList.remove("reveal-pending");
     opt.classList.add("revealed");
@@ -395,15 +409,18 @@ function handleQuizEnter() {
     return false;
   }
 
-  // 2) 出題中：問題文と選択肢A〜Dを1回のEnterでまとめて表示（効果音付き）
-  if (revealQuestion()) {
+  // 2) 出題中：まず問題文だけを表示（効果音付き）。参加者のスマホにも問題文を出す
+  if (revealQuestionText()) {
     playQuestionRevealSe();
+    socket.emit("hostCommand", { type: "revealQuestionText" });
     return true;
   }
 
-  // 3) 選択肢を出し切ったら、タイマー（＝回答受付）を手動開始
+  // 3) 次のEnterで、選択肢A〜Dの表示とタイマー（＝回答受付）を同時に開始
   //    非動画：カウントダウン開始／動画：回答受付のみ開始
+  //    サーバーが参加者のスマホにも選択肢を出す
   if (!timerStarted) {
+    revealOptions();
     socket.emit("hostCommand", { type: "startTimer" });
     timerStarted = true;
     // タイマー開始と同時にカウントダウンを表示（動画問題は表示しない）
@@ -576,13 +593,14 @@ function setupSocketHandlers() {
       console.log("[question] 動画がないため、カウントダウンを表示（Enterで開始）");
     }
 
-    // 進行中の問題から再開した場合は、問題文と選択肢をすべて表示済みにする
+    // 進行中の問題から再開した場合は、進んでいた所まで表示済みにする
     if (questionData.resume) {
       // 復帰直後に届く結果表示ではピンポンを鳴らさない
       suppressAnswerSe = true;
       setTimeout(() => (suppressAnswerSe = false), 1000);
-      revealQuestion();
       timerStarted = !!questionData.resume.timerStarted;
+      if (questionData.resume.textRevealed || timerStarted) revealQuestionText();
+      if (timerStarted) revealOptions();
       if (timerStarted && !hasVideo && countdownElement) {
         countdownElement.style.display = "";
       }

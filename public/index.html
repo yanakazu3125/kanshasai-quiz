@@ -9,10 +9,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="participant.css">
+    <link rel="stylesheet" href="logo-names.css">
 </head>
 <body>
     <div class="container">
-        <h1 class="logo"><img src="/title/logo.png" alt="新郎新婦のラブがスゴいクイズGP"></h1>
+        <h1 class="logo">
+            <!-- ロゴ：文字とCSSで描く（logo-names.js が中身を作る） -->
+            <div id="participant-logo" class="logo-wrap"></div>
+        </h1>
         <p id="status">サーバーに接続中...</p>
         <div id="countdown-container">
             <div id="countdown"></div>
@@ -48,6 +52,7 @@
     <!-- Socket.IOクライアントライブラリを読み込む -->
     <script src="/socket.io/socket.io.js"></script>
     <!-- クライアント側のJavaScriptを読み込む -->
+    <script src="logo-names.js"></script>
     <script src="client.js"></script>
 </body>
 </html>

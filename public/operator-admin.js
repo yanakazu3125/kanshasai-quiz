@@ -539,103 +539,40 @@ async function uploadImageAndSetUrl(fileInputEl, urlInputEl) {
   });
 }
 
-// タイトル画面（左下）の画像
-const titleImageFileInput = document.getElementById("titleImageFile");
-const uploadTitleImageBtn = document.getElementById("uploadTitleImageBtn");
-const titleImageStatusElement = document.getElementById("title-image-status");
-const titleImagePreviewDiv = document.getElementById("title-image-preview");
-const titleImagePreviewImg = document.getElementById("title-image-preview-img");
-const removeTitleImageBtn = document.getElementById("removeTitleImageBtn");
-
-if (uploadTitleImageBtn) {
-  uploadTitleImageBtn.addEventListener("click", async () => {
-    const file = titleImageFileInput?.files?.[0];
-    if (!file) {
-      titleImageStatusElement.textContent = "ファイルを選択してください";
-      titleImageStatusElement.style.color = "#e74c3c";
-      return;
-    }
-
-    if (titleImageRemoveWhite?.checked && !localTitleImageUrl) {
-      titleImageStatusElement.textContent = "白い背景を透明にしています。少し待ってからもう一度押してください";
-      titleImageStatusElement.style.color = "#e74c3c";
-      return;
-    }
-
-    titleImageStatusElement.textContent = "アップロード中...";
-    titleImageStatusElement.style.color = "#61dafb";
-
-    const fd = new FormData();
-    if (processedTitleImageBlob) {
-      // 白背景を抜いた画像は透明を保つためPNGで送る
-      const baseName = file.name.replace(/\.[^.]+$/, "") || "title-image";
-      fd.append("image", processedTitleImageBlob, `${baseName}.png`);
-    } else {
-      fd.append("image", file);
-    }
-
-    try {
-      const res = await fetch("/api/upload-title-image", {
-        method: "POST",
-        credentials: "include",
-        body: fd,
-      });
-
-      if (!res.ok) {
-        titleImageStatusElement.textContent = "アップロードに失敗しました: " + res.status;
-        titleImageStatusElement.style.color = "#e74c3c";
-        return;
-      }
-
-      titleImageStatusElement.textContent = "アップロード成功！表示画面を再読み込みすると反映されます";
-      titleImageStatusElement.style.color = "#1f8f4a";
-      titleImageFileInput.value = "";
-      titlePreviewToken++;
-      if (localTitleImageUrl) URL.revokeObjectURL(localTitleImageUrl);
-      localTitleImageUrl = null;
-      processedTitleImageBlob = null;
-      loadTitleImageInfo();
-    } catch (error) {
-      console.error("タイトル画像アップロードエラー:", error);
-      titleImageStatusElement.textContent = "アップロード中にエラーが発生しました";
-      titleImageStatusElement.style.color = "#e74c3c";
-    }
-  });
-}
-
-// ミニプレビューの左下に画像を出す（src が空なら画像なし）
+// タイトル画面の左右の画像（新郎新婦など）
 const titleMiniCaption = document.getElementById("title-mini-caption");
-let savedTitleImageUrl = null; // 保存済みの画像URL
-let localTitleImageUrl = null; // 選択中（未アップロード）の画像のURL
 
-function setTitlePreview(src, caption) {
-  if (src) {
-    titleImagePreviewImg.src = src;
-    titleImagePreviewImg.hidden = false;
-  } else {
-    titleImagePreviewImg.removeAttribute("src");
-    titleImagePreviewImg.hidden = true;
+const TITLE_IMAGE_MAX_SIZE = 2000; // 背景抜き時の最大辺（大きすぎる画像は縮小）
+
+// 画像の外周の色（背景色）を調べる。外周のピクセルの色ごとの中央値を使うので、
+// 縁に人物などが少しかかっていても背景色を拾える
+function detectBackgroundColor(px, w, h) {
+  const rs = [];
+  const gs = [];
+  const bs = [];
+  const add = (x, y) => {
+    const i = (y * w + x) * 4;
+    if (px[i + 3] < 128) return; // すでに透明な所は数えない
+    rs.push(px[i]);
+    gs.push(px[i + 1]);
+    bs.push(px[i + 2]);
+  };
+  const step = Math.max(1, Math.floor(Math.max(w, h) / 400)); // 間引いて軽くする
+  for (let x = 0; x < w; x += step) {
+    add(x, 0);
+    add(x, h - 1);
   }
-  if (titleMiniCaption) titleMiniCaption.textContent = caption;
+  for (let y = 0; y < h; y += step) {
+    add(0, y);
+    add(w - 1, y);
+  }
+  if (!rs.length) return null;
+  const median = (arr) => arr.sort((a, b) => a - b)[Math.floor(arr.length / 2)];
+  return [median(rs), median(gs), median(bs)];
 }
 
-function showSavedTitlePreview() {
-  setTitlePreview(
-    savedTitleImageUrl,
-    savedTitleImageUrl ? "プレビュー（保存済みの画像）" : "プレビュー（画像なし）"
-  );
-}
-
-// 白い背景を透明にする設定
-const titleImageRemoveWhite = document.getElementById("titleImageRemoveWhite");
-const titleImageWhiteTolerance = document.getElementById("titleImageWhiteTolerance");
-let processedTitleImageBlob = null; // 白抜き済みの画像（アップロードに使う）
-let titlePreviewToken = 0; // 連続操作時に古い処理結果で上書きしないための番号
-
-const TITLE_IMAGE_MAX_SIZE = 2000; // 白抜き時の最大辺（大きすぎる画像は縮小）
-
-// 画像の外周から続く白っぽい部分だけを透明にしたPNGを返す
-async function removeWhiteBackground(file, tolerance) {
+// 画像の外周から続く背景色（白・グレー・青などの単色）の部分だけを透明にしたPNGを返す
+async function removeSolidBackground(file, tolerance) {
   const bitmap = await createImageBitmap(file);
   const scale = Math.min(1, TITLE_IMAGE_MAX_SIZE / Math.max(bitmap.width, bitmap.height));
   const w = Math.round(bitmap.width * scale);
@@ -649,11 +586,17 @@ async function removeWhiteBackground(file, tolerance) {
 
   const image = ctx.getImageData(0, 0, w, h);
   const px = image.data;
-  // 白からの距離（0＝真っ白）
-  const distance = (i) => 255 - Math.min(px[i * 4], px[i * 4 + 1], px[i * 4 + 2]);
+  // 背景色からの距離（0＝背景色と同じ）。RGBのうち一番離れている成分で測る
+  const bg = detectBackgroundColor(px, w, h) || [255, 255, 255];
+  const distance = (i) =>
+    Math.max(
+      Math.abs(px[i * 4] - bg[0]),
+      Math.abs(px[i * 4 + 1] - bg[1]),
+      Math.abs(px[i * 4 + 2] - bg[2])
+    );
   const isBackground = (i) => px[i * 4 + 3] === 0 || distance(i) <= tolerance;
 
-  // 外周の白から塗りつぶし（内側の白い部分は残す）
+  // 外周の背景色から塗りつぶし（内側の同じ色の部分は残す）
   const removed = new Uint8Array(w * h);
   const stack = [];
   const push = (i) => {
@@ -703,102 +646,250 @@ async function removeWhiteBackground(file, tolerance) {
   );
 }
 
-// 選択中のファイルをプレビューに反映（白抜きONなら処理後の画像）
-async function updateLocalTitlePreview() {
-  const token = ++titlePreviewToken;
-  if (localTitleImageUrl) URL.revokeObjectURL(localTitleImageUrl);
-  localTitleImageUrl = null;
-  processedTitleImageBlob = null;
+// 1枚分（左 or 右）の設定欄
+function createTitleImageSlot(side) {
+  const root = document.querySelector(`.title-image-slot[data-side="${side}"]`);
+  if (!root) return null;
+  const q = (selector) => root.querySelector(selector);
+  return {
+    side,
+    fileInput: q(".title-image-file"),
+    removeWhite: q(".title-image-remove-white"),
+    tolerance: q(".title-image-tolerance"),
+    uploadBtn: q(".title-image-upload"),
+    status: q(".title-image-status"),
+    removeArea: q(".title-image-remove-area"),
+    removeBtn: q(".title-image-remove"),
+    previewImg: document.querySelector(`.title-mini-custom[data-side="${side}"]`),
+    savedUrl: null, // 保存済みの画像URL
+    localUrl: null, // 選択中（未アップロード）の画像のURL
+    processedBlob: null, // 白抜き済みの画像（アップロードに使う）
+    token: 0, // 連続操作時に古い処理結果で上書きしないための番号
+  };
+}
 
-  const file = titleImageFileInput.files?.[0];
-  const removeWhite = !!titleImageRemoveWhite?.checked;
-  if (titleImageWhiteTolerance) titleImageWhiteTolerance.disabled = !removeWhite;
+const titleImageSlots = ["left", "right"]
+  .map(createTitleImageSlot)
+  .filter(Boolean);
+
+function setSlotStatus(slot, text, color = "#bbb") {
+  slot.status.textContent = text;
+  slot.status.style.color = color;
+}
+
+// ミニプレビューを更新（未アップロードの画像があればそちらを優先）
+function updateTitleMiniPreview(busySlot = null) {
+  const unsaved = [];
+  titleImageSlots.forEach((slot) => {
+    const src = slot.localUrl || slot.savedUrl;
+    if (src) {
+      slot.previewImg.src = src;
+      slot.previewImg.hidden = false;
+    } else {
+      slot.previewImg.removeAttribute("src");
+      slot.previewImg.hidden = true;
+    }
+    if (slot.localUrl) unsaved.push(slot.side === "left" ? "左" : "右");
+  });
+
+  if (!titleMiniCaption) return;
+  if (busySlot) {
+    titleMiniCaption.textContent = "背景を透明にしています...";
+  } else if (unsaved.length) {
+    titleMiniCaption.textContent = `プレビュー（${unsaved.join("・")}はまだアップロードされていません）`;
+  } else {
+    titleMiniCaption.textContent = "プレビュー";
+  }
+}
+
+// 選択中のファイルをプレビューに反映（白抜きONなら処理後の画像）
+async function updateLocalSlotPreview(slot) {
+  const token = ++slot.token;
+  if (slot.localUrl) URL.revokeObjectURL(slot.localUrl);
+  slot.localUrl = null;
+  slot.processedBlob = null;
+
+  const file = slot.fileInput.files?.[0];
+  const removeWhite = !!slot.removeWhite.checked;
+  slot.tolerance.disabled = !removeWhite;
   if (!file) {
-    showSavedTitlePreview();
+    updateTitleMiniPreview();
     return;
   }
 
   let blob = file;
   if (removeWhite) {
-    if (titleMiniCaption) titleMiniCaption.textContent = "白い背景を透明にしています...";
+    updateTitleMiniPreview(slot);
     try {
-      blob = await removeWhiteBackground(file, Number(titleImageWhiteTolerance.value));
+      blob = await removeSolidBackground(file, Number(slot.tolerance.value));
     } catch (error) {
-      console.error("白背景の除去エラー:", error);
-      if (token !== titlePreviewToken) return;
-      titleImageStatusElement.textContent = "この画像は白背景の除去ができませんでした";
-      titleImageStatusElement.style.color = "#e74c3c";
+      console.error("背景の除去エラー:", error);
+      if (token !== slot.token) return;
+      setSlotStatus(slot, "この画像は背景の除去ができませんでした", "#e74c3c");
       blob = file;
     }
-    if (token !== titlePreviewToken) return; // より新しい操作があった
-    if (blob !== file) processedTitleImageBlob = blob;
+    if (token !== slot.token) return; // より新しい操作があった
+    if (blob !== file) slot.processedBlob = blob;
   }
 
-  localTitleImageUrl = URL.createObjectURL(blob);
-  setTitlePreview(
-    localTitleImageUrl,
-    processedTitleImageBlob
-      ? "プレビュー（白背景を除去・まだアップロードされていません）"
-      : "プレビュー（まだアップロードされていません）"
-  );
+  slot.localUrl = URL.createObjectURL(blob);
+  updateTitleMiniPreview();
 }
 
-// ファイル選択・白抜きの切替・強さの変更で、アップロード前でもプレビューに反映する
-if (titleImageFileInput) {
-  titleImageFileInput.addEventListener("change", updateLocalTitlePreview);
+async function uploadSlotImage(slot) {
+  const file = slot.fileInput.files?.[0];
+  if (!file) {
+    setSlotStatus(slot, "ファイルを選択してください", "#e74c3c");
+    return;
+  }
+  if (slot.removeWhite.checked && !slot.localUrl) {
+    setSlotStatus(slot, "背景を透明にしています。少し待ってからもう一度押してください", "#e74c3c");
+    return;
+  }
+
+  setSlotStatus(slot, "アップロード中...", "#61dafb");
+
+  const fd = new FormData();
+  if (slot.processedBlob) {
+    // 背景を抜いた画像は透明を保つためPNGで送る
+    const baseName = file.name.replace(/\.[^.]+$/, "") || "title-image";
+    fd.append("image", slot.processedBlob, `${baseName}.png`);
+  } else {
+    fd.append("image", file);
+  }
+
+  try {
+    const res = await fetch(`/api/upload-title-image?side=${slot.side}`, {
+      method: "POST",
+      credentials: "include",
+      body: fd,
+    });
+
+    if (!res.ok) {
+      setSlotStatus(slot, "アップロードに失敗しました: " + res.status, "#e74c3c");
+      return;
+    }
+
+    setSlotStatus(slot, "アップロード成功！表示画面を再読み込みすると反映されます", "#1f8f4a");
+    slot.fileInput.value = "";
+    slot.token++;
+    if (slot.localUrl) URL.revokeObjectURL(slot.localUrl);
+    slot.localUrl = null;
+    slot.processedBlob = null;
+    loadTitleImageInfo();
+  } catch (error) {
+    console.error("タイトル画像アップロードエラー:", error);
+    setSlotStatus(slot, "アップロード中にエラーが発生しました", "#e74c3c");
+  }
 }
-if (titleImageRemoveWhite) {
-  titleImageRemoveWhite.addEventListener("change", updateLocalTitlePreview);
+
+async function removeSlotImage(slot) {
+  const label = slot.side === "left" ? "左下" : "右下";
+  if (!confirm(`タイトル画面の${label}の画像を削除しますか？`)) return;
+
+  try {
+    const res = await fetch(`/api/operator/title-image?side=${slot.side}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+    if (!res.ok) {
+      alert("画像の削除に失敗しました");
+      return;
+    }
+    setSlotStatus(slot, "画像を削除しました", "#1f8f4a");
+    slot.savedUrl = null;
+    slot.removeArea.style.display = "none";
+    updateTitleMiniPreview();
+  } catch (error) {
+    console.error("タイトル画像削除エラー:", error);
+    alert("画像の削除中にエラーが発生しました");
+  }
 }
-if (titleImageWhiteTolerance) {
+
+titleImageSlots.forEach((slot) => {
+  // ファイル選択・白抜きの切替・強さの変更で、アップロード前でもプレビューに反映する
+  slot.fileInput.addEventListener("change", () => updateLocalSlotPreview(slot));
+  slot.removeWhite.addEventListener("change", () => updateLocalSlotPreview(slot));
   // ドラッグ中は重いので、指を離した時に処理する
-  titleImageWhiteTolerance.addEventListener("change", updateLocalTitlePreview);
-}
+  slot.tolerance.addEventListener("change", () => updateLocalSlotPreview(slot));
+  slot.uploadBtn.addEventListener("click", () => uploadSlotImage(slot));
+  slot.removeBtn.addEventListener("click", () => removeSlotImage(slot));
+});
 
-// タイトル画像の情報を読み込む
+// 保存済みの画像（左右）とロゴの名前を読み込む
 async function loadTitleImageInfo() {
   try {
     const response = await fetch("/api/auth/operator/status", {
       credentials: "include",
     });
     const statusData = await response.json();
+    if (!statusData.isLoggedIn) return;
 
-    savedTitleImageUrl =
-      statusData.isLoggedIn && statusData.titleImageUrl ? statusData.titleImageUrl : null;
-    titleImagePreviewDiv.style.display = savedTitleImageUrl ? "block" : "none";
-    // 未アップロードの画像を選択中なら、そちらのプレビューを優先する
-    if (!localTitleImageUrl) showSavedTitlePreview();
+    const savedUrls = {
+      left: statusData.titleImageUrl || null,
+      right: statusData.titleImageRightUrl || null,
+    };
+    titleImageSlots.forEach((slot) => {
+      slot.savedUrl = savedUrls[slot.side];
+      slot.removeArea.style.display = slot.savedUrl ? "block" : "none";
+    });
+    updateTitleMiniPreview();
+
+    // タイトルロゴの名前（初回だけ入力欄に入れる。入力中の内容は上書きしない）
+    if (titleNamesInput && !titleNamesLoaded) {
+      titleNamesLoaded = true;
+      titleNamesInput.value = statusData.titleNames || "";
+      applyLogoNames(titleMiniLogo, titleNamesInput.value);
+    }
   } catch (error) {
     console.error("タイトル画像情報の取得エラー:", error);
   }
 }
 
-// タイトル画像の削除
-if (removeTitleImageBtn) {
-  removeTitleImageBtn.addEventListener("click", async () => {
-    if (!confirm("タイトル画面の画像を削除しますか？")) {
-      return;
-    }
+// タイトルロゴの名前（「新郎新婦の」の代わり）
+const titleNamesInput = document.getElementById("titleNamesInput");
+const saveTitleNamesBtn = document.getElementById("saveTitleNamesBtn");
+const titleNamesStatusElement = document.getElementById("title-names-status");
+const titleMiniLogo = document.getElementById("title-mini-logo");
+let titleNamesLoaded = false; // 保存済みの名前を入力欄に読み込んだか
+
+// 入力中の名前をプレビューのロゴに反映する
+if (titleNamesInput) {
+  titleNamesInput.addEventListener("input", () => {
+    applyLogoNames(titleMiniLogo, titleNamesInput.value);
+  });
+}
+
+if (saveTitleNamesBtn) {
+  saveTitleNamesBtn.addEventListener("click", async () => {
+    titleNamesStatusElement.textContent = "保存中...";
+    titleNamesStatusElement.style.color = "#61dafb";
 
     try {
-      const res = await fetch("/api/operator/title-image", {
-        method: "DELETE",
+      const res = await fetch("/api/operator/title-names", {
+        method: "PUT",
         credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ titleNames: titleNamesInput.value }),
       });
+      const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        alert("画像の削除に失敗しました");
+        titleNamesStatusElement.textContent = data.message || `保存に失敗しました: ${res.status}`;
+        titleNamesStatusElement.style.color = "#e74c3c";
         return;
       }
 
-      titleImageStatusElement.textContent = "画像を削除しました";
-      titleImageStatusElement.style.color = "#1f8f4a";
-      titleImagePreviewDiv.style.display = "none";
-      savedTitleImageUrl = null;
-      if (!localTitleImageUrl) showSavedTitlePreview();
+      titleNamesInput.value = data.titleNames;
+      applyLogoNames(titleMiniLogo, data.titleNames);
+      titleNamesStatusElement.textContent = data.titleNames
+        ? "保存しました！表示画面・参加者画面を再読み込みすると反映されます"
+        : "名前を消して、元のロゴに戻しました";
+      titleNamesStatusElement.style.color = "#1f8f4a";
     } catch (error) {
-      console.error("タイトル画像削除エラー:", error);
-      alert("画像の削除中にエラーが発生しました");
+      console.error("タイトルロゴの名前の保存エラー:", error);
+      titleNamesStatusElement.textContent = "保存中にエラーが発生しました";
+      titleNamesStatusElement.style.color = "#e74c3c";
     }
   });
 }

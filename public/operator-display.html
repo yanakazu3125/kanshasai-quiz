@@ -13,6 +13,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="display.css" />
+    <link rel="stylesheet" href="logo-names.css" />
   </head>
   <body class="page-display">
     <!-- クイズ開始前の待機画面（参加用QRコード） -->
@@ -41,10 +42,12 @@
       ></video>
       <audio id="title-bgm" src="/title/bgm.mp3" loop></audio>
       <div class="title-stage">
-        <img id="title-logo" class="title-logo" src="/title/logo.png" alt="タイトルロゴ" />
-        <img id="title-super" class="title-super" src="/title/super.png" alt="" />
+        <!-- ロゴ：文字とCSSで描く（1段目は管理画面で入力した名前。logo-names.js が中身を作る） -->
+        <div id="title-logo" class="title-logo logo-wrap"></div>
         <!-- 左下の画像（管理画面で設定。未設定なら非表示） -->
         <img id="title-custom-image" class="title-custom-image" alt="" hidden />
+        <!-- 右下の画像（管理画面で設定。未設定なら非表示） -->
+        <img id="title-custom-image-right" class="title-custom-image is-right" alt="" hidden />
       </div>
       <button id="title-start-btn" class="title-start-btn">クイズを始める</button>
     </div>
@@ -155,6 +158,7 @@
     <!-- Socket.IO -->
     <script src="/socket.io/socket.io.js"></script>
     <!-- メインスクリプト -->
+    <script src="logo-names.js"></script>
     <script src="operator-display.js"></script>
   </body>
 </html>
